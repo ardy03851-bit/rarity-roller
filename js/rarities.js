@@ -15,7 +15,6 @@ const RARITIES = (typeof RARITY_CONFIG !== 'undefined' ? RARITY_CONFIG : []).map
   glow: r.glow || 'rgba(154,163,173,0.4)',
   font: r.font || 'Sora',
   icon: r.icon || 'circle',
-  shape: r.shape || 'soft',
   hover: r.hover || 'lift',
   speed: r.speed || 1,
   images: r.images || null,

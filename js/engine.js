@@ -88,6 +88,16 @@
         rot: rand(0, TAU), vr: rand(-3, 3),
       };
     },
+    /* the signature voxel: a spinning 3D-feeling pixel */
+    voxel(o) {
+      return {
+        type: 'voxel', x: o.x, y: o.y,
+        vx: Math.cos(o.a) * o.speed, vy: Math.sin(o.a) * o.speed,
+        g: o.gravity ?? 260, drag: 0.985, size: o.size ?? rand(3, 7),
+        life: o.life ?? rand(0.7, 1.2), age: 0, color: o.color, blend: 'lighter',
+        rot: rand(0, TAU), vr: rand(-5, 5),
+      };
+    },
   };
 
   function drawStar(c, x, y, r, rot) {
@@ -139,6 +149,16 @@
           ctx.lineWidth = 1.4;
           drawStar(ctx, p.x, p.y, p.size * t, p.rot);
           break;
+        case 'voxel': {
+          /* a pixel in faux-3D: spins and shrinks as it fades */
+          const s = p.size * (0.4 + 0.6 * t);
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.rot);
+          ctx.fillRect(-s / 2, -s / 2, s, s);
+          ctx.restore();
+          break;
+        }
         case 'ring':
           ctx.lineWidth = 1.5 * t + 0.4;
           ctx.beginPath();
@@ -193,6 +213,73 @@
   };
 
   FX.clear = () => { particles = []; };
+
+  /* ==========================================================
+     AMBIENT VOXEL FIELD — a quiet drift of faint pixels behind
+     the stage. Nearly invisible; it just makes the dark feel
+     like it has depth. Costs almost nothing (a few dozen rects).
+     ========================================================== */
+  FX.ambient = () => {
+    if (FX._ambient) return; // already running
+    FX._ambient = true;
+    const c = document.createElement('canvas');
+    c.id = 'ambient-canvas';
+    c.setAttribute('aria-hidden', 'true');
+    document.body.prepend(c);
+    const actx = c.getContext('2d');
+    let W = 0, H = 0, squares = [];
+
+    const rand = (a, b) => a + Math.random() * (b - a);
+
+    function seed() {
+      const n = Math.max(14, Math.min(46, Math.round((W * H) / 42000)));
+      squares = [];
+      for (let i = 0; i < n; i++) {
+        squares.push({
+          x: Math.random() * W, y: Math.random() * H,
+          s: rand(2, 7),
+          a: rand(0.015, 0.05),
+          vx: rand(-7, 7), vy: rand(-16, -5),
+          vr: rand(-0.35, 0.35), rot: rand(0, Math.PI * 2),
+          ph: rand(0, Math.PI * 2),
+        });
+      }
+    }
+
+    function resize() {
+      W = c.width = innerWidth;
+      H = c.height = innerHeight;
+      seed();
+    }
+    resize();
+    addEventListener('resize', resize);
+
+    let last = performance.now();
+    function frame(now) {
+      const dt = Math.min((now - last) / 1000 || 0.016, 0.05);
+      last = now;
+      actx.clearRect(0, 0, W, H);
+      const t = now / 1000;
+      for (const q of squares) {
+        q.x += q.vx * dt;
+        q.y += q.vy * dt;
+        q.rot += q.vr * dt;
+        if (q.y < -12) { q.y = H + 10; q.x = Math.random() * W; }
+        if (q.x < -12) q.x = W + 10;
+        if (q.x > W + 12) q.x = -10;
+        const pulse = 0.6 + 0.4 * Math.sin(t * 0.7 + q.ph);
+        actx.save();
+        actx.globalAlpha = q.a * pulse;
+        actx.translate(q.x, q.y);
+        actx.rotate(q.rot);
+        actx.fillStyle = '#ffffff';
+        actx.fillRect(-q.s / 2, -q.s / 2, q.s, q.s);
+        actx.restore();
+      }
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  };
 
   /* ==========================================================
      SOUND — quiet, warm, procedural.
@@ -352,6 +439,11 @@
       [14, 17.5], [16.5, 12.5], [15.5, 8], [12.5, 4.5],
     ],
     droplet: () => [[12, 1.5], [16.5, 7.5], [19.5, 12.5], [19, 16.5], [15.5, 20.5], [12, 22], [8.5, 20.5], [5, 16.5], [4.5, 12.5], [7.5, 7.5]],
+    /* voxel-flavored shapes */
+    gem: () => [[12, 1.5], [22, 9], [18, 21], [6, 21], [2, 9]],
+    blade: () => [[12, 0.5], [23, 12], [12, 23.5], [1, 12]],
+    pixel: () => [[3, 3], [21, 3], [21, 13], [13, 13], [13, 21], [3, 21]],
+    pixelstar: () => starVerts(4, 11, 5),
   };
 
   /* resample polygon perimeter to exactly K evenly spaced points */
@@ -497,7 +589,7 @@
 
   FX.tick = (rarity, label) => {
     const el = document.createElement('span');
-    el.className = 'tick';
+    el.className = 'tick rar-text';
     el.textContent = label ?? rarity.name;
     FX.vars(el, rarity);
     return el;
@@ -513,7 +605,7 @@
   FX.buildCard = (rarity, { count, discovered = true, isNew = false } = {}) => {
     const odds = `1 in ${Math.round((typeof TOTAL_WEIGHT !== 'undefined' ? TOTAL_WEIGHT : 100000) / rarity.weight).toLocaleString()}`;
     const card = document.createElement('article');
-    card.className = `inv-card shape-${rarity.shape} hover-${rarity.hover} t${rarity.tier}` +
+    card.className = `inv-card hover-${rarity.hover} t${rarity.tier}` +
       (discovered ? '' : ' undiscovered');
     FX.vars(card, rarity);
 
@@ -782,21 +874,21 @@
 
     if (t <= 6) {
       FX.flash(colors[1], 400, 0.1);
-      FX.burst(p.x, p.y, { type: 'spark', count: 10, colors, speedMin: 60, speedMax: 180 });
+      FX.burst(p.x, p.y, { type: 'voxel', count: 12, colors, speedMin: 60, speedMax: 190 });
       return;
     }
 
     if (t <= 8) {
       FX.flash(colors[1], 450, 0.13);
-      FX.burst(p.x, p.y, { type: 'spark', count: 16, colors, speedMin: 80, speedMax: 240 });
+      FX.burst(p.x, p.y, { type: 'voxel', count: 18, colors, speedMin: 80, speedMax: 250 });
       FX.burst(p.x, p.y, { type: 'orb', count: 5, colors, speedMin: 30, speedMax: 90 });
       return;
     }
 
     /* top tier */
     FX.flash(colors[1], 550, 0.16);
-    FX.burst(p.x, p.y, { type: 'spark', count: 26, colors, speedMin: 100, speedMax: 320 });
-    FX.burst(p.x, p.y, { type: 'star', count: 8, colors, speedMin: 60, speedMax: 160 });
+    FX.burst(p.x, p.y, { type: 'voxel', count: 30, colors, speedMin: 100, speedMax: 330 });
+    FX.burst(p.x, p.y, { type: 'spark', count: 10, colors, speedMin: 120, speedMax: 340 });
     FX.ringBurst(p.x, p.y, { colors, count: 2, stagger: 260, grow: 300, life: 0.9 });
   };
 

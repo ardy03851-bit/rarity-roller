@@ -237,6 +237,7 @@
      BOOT
      ========================================================== */
   (async () => {
+    FX.ambient();
     const save = await window.RRStorage.init();
     window.RRStorage.current = save;
     updateStats();

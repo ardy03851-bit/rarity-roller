@@ -14,7 +14,7 @@ This is the complete guide to configuring rarities in **Rarity Roller**. All rar
 Done. The new rarity immediately:
 
 - Appears in the roll ticker and can be rolled
-- Gets its own row in your inventory with its card shape and hover effect
+- Gets its own card in your inventory with its hover effect
 - Animates inside changelog text whenever its name appears
 - Is saved durably like every other rarity
 - Has its odds computed automatically against the shared pool
@@ -35,7 +35,6 @@ A rarity block looks like this:
   glow: 'rgba(214,169,124,0.5)',
   font: 'MedievalSharp',
   icon: 'shield',
-  shape: 'cut',
   hover: 'dust',
   speed: 0.95,
   images: { art: 'assets/patterns/stars.svg' },
@@ -49,14 +48,14 @@ The unique internal key. Lowercase, no spaces. This is what the save file uses t
 The display name. This is also a **magic word**: if the name ever appears in changelog text, it is automatically rendered with its animated gradient. Write "the new **Fabled** effect" in a changelog note and *Fabled* glows teal in place.
 
 ### `weight` — required
-Tickets in the shared pool. All weights are summed, and each rarity's odds are `weight / total`. With the current 107,050 total:
+Tickets in the shared pool. All weights are summed, and each rarity's odds are `weight / total`. With the current 121,870 total:
 
 | weight | odds (approx.) |
 | --- | --- |
 | 50000 | 1 in 2 |
-| 10000 | 1 in 11 |
-| 1000 | 1 in 107 |
-| 50 | 1 in 2,141 |
+| 10000 | 1 in 12 |
+| 1000 | 1 in 122 |
+| 50 | 1 in 2,437 |
 
 Use the `tier` for the drama and `weight` for the actual rarity — they're independent.
 
@@ -67,8 +66,8 @@ Scales the reveal choreography and the default glow strength:
 | --- | --- |
 | 1–2 | name animation only — quiet, elegant |
 | 3–4 | soft flash |
-| 5–6 | flash + fine light streaks |
-| 7–8 | more sparks + soft orbs |
+| 5–6 | flash + spinning voxel pixels |
+| 7–8 | more voxels + soft orbs |
 | 9+ | shockwave rings, full choreography |
 
 ### `colors` — required
@@ -83,19 +82,10 @@ Any family from the Google Fonts link in `index.html` (32 families loaded — se
 ### `icon` — optional (default: `circle`)
 The shape shown above the stage name and on inventory cards. **The stage icon morphs smoothly** between shapes as the ticker runs. Choose one:
 
-`circle` `square` `triangle` `diamond` `pentagon` `hexagon` `octagon` `star4` `star5` `star6` `star8` `burst` `cross` `shield` `chevron` `crescent` `droplet`
+`circle` `square` `triangle` `diamond` `pentagon` `hexagon` `octagon` `star4` `star5` `star6` `star8` `burst` `cross` `shield` `chevron` `crescent` `droplet` `gem` `blade` `pixel` `pixelstar`
 
-### `shape` — optional (default: `soft`)
-The inventory card's silhouette:
-
-| value | look |
-| --- | --- |
-| `soft` | rounded rectangle |
-| `sharp` | near-square corners |
-| `pill` | fully rounded ends |
-| `cut` | chamfered (beveled) corners |
-| `hex` | hexagon |
-| `round` | circle |
+### Card shape — fixed
+Inventory cards are always crisp squares now (removed in 1.3.0 to keep the collection looking like one coherent deck). The `shape` field is no longer used.
 
 ### `hover` — optional (default: `lift`)
 The subtle effect when a finger or mouse rests on the inventory card. Works on touch too, not just hover:
@@ -140,19 +130,25 @@ Two ready-made textures ship in `assets/patterns/` (`stars.svg`, `grid.svg`) —
 - **Changelog is data too.** New update? Add an entry to the `CHANGELOG` array in `js/changelog.js` (and mirror it in `CHANGELOG.md`). Any rarity name in your text animates automatically.
 - **Test with DevTools.** `RARITIES` in the console shows the fully-resolved config, `rollRarity()` runs the odds, and `RarityFX.playReveal(RARITIES[0], document.body)` previews a reveal.
 
-## The 12 shipped rarities
+## The 18 shipped rarities
 
-| rarity | tier | odds | shape | hover |
-| --- | --- | --- | --- | --- |
-| Common | 1 | 1 in 2 | soft | lift |
-| Uncommon | 2 | 1 in 4 | soft | glow |
-| Rare | 3 | 1 in 9 | pill | underline |
-| Epic | 4 | 1 in 15 | cut | tilt |
-| Ancient | 4 | 1 in 26 | cut | dust |
-| Legendary | 5 | 1 in 36 | hex | sheen |
-| Fabled | 5 | 1 in 45 | soft | twinkle |
-| Mythic | 6 | 1 in 59 | sharp | pulse |
-| Exotic | 7 | 1 in 134 | hex | scan |
-| Radiant | 7 | 1 in 214 | cut | pulse |
-| Celestial | 8 | 1 in 306 | hex | twinkle |
-| Divine | 9 | 1 in 2,141 | hex | hue |
+| rarity | tier | odds | font | icon | hover |
+| --- | --- | --- | --- | --- | --- |
+| Common | 1 | 1 in 2 | Space Grotesk | circle | lift |
+| Uncommon | 2 | 1 in 5 | Chakra Petch | triangle | glow |
+| Rare | 3 | 1 in 10 | Michroma | diamond | underline |
+| Corrupted | 3 | 1 in 14 | Major Mono Display | pixel | scan |
+| Epic | 4 | 1 in 17 | Syne | pentagon | tilt |
+| Ancient | 4 | 1 in 29 | MedievalSharp | shield | dust |
+| Ethereal | 4 | 1 in 36 | Cormorant Garamond | droplet | twinkle |
+| Legendary | 5 | 1 in 41 | Cinzel | star5 | sheen |
+| Fabled | 5 | 1 in 51 | Fraunces | star6 | pulse |
+| Quantum | 5 | 1 in 76 | Bungee | gem | sheen |
+| Mythic | 6 | 1 in 102 | Grenze Gotisch | hexagon | pulse |
+| Neon | 6 | 1 in 135 | Zen Dots | blade | hue |
+| Void | 6 | 1 in 203 | Anton | pixelstar | dust |
+| Exotic | 7 | 1 in 271 | Audiowide | chevron | scan |
+| Radiant | 7 | 1 in 244 | Righteous | burst | pulse |
+| Celestial | 8 | 1 in 348 | Syncopate | star4 | twinkle |
+| Prismatic | 8 | 1 in 554 | Playfair Display | pixelstar | hue |
+| Divine | 9 | 1 in 2,437 | Monoton | star8 | hue |

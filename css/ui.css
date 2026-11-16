@@ -4,6 +4,15 @@
    ============================================================ */
 
 /* ---------- effect layers ---------- */
+#ambient-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+
 #fx-canvas {
   position: fixed;
   inset: 0;
@@ -161,6 +170,11 @@
   user-select: none;
 }
 
+.roll-btn:hover {
+  border-color: rgba(255, 255, 255, 0.4);
+  color: var(--color-text);
+}
+
 .roll-btn:active {
   transform: scale(0.96);
 }
@@ -242,6 +256,10 @@
 }
 
 /* keep the floating tabs toggle clear of the cards */
+.inv-grid {
+  padding-right: 60px;
+}
+
 @media (min-width: 860px) {
   .inv-grid {
     padding-right: 92px;
@@ -405,13 +423,15 @@
   color: var(--color-text);
 }
 
+/* a small voxel diamond marks the current tab */
 .tab-btn[aria-current='page']::after {
   content: '';
   position: absolute;
   right: 0;
   top: 50%;
-  width: 14px;
-  height: 1px;
+  width: 5px;
+  height: 5px;
+  transform: translateY(-50%) rotate(45deg);
   background: var(--color-text);
 }
 

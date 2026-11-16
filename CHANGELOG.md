@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.3.0 — 2026-11-16 — Pixel perfect
+
+- The collection is now a square deck: card shapes were removed from the config and every card is a crisp square — the inventory reads as one coherent set instead of a mixed bag.
+- The rolling ticker always wears the rarity now: every name that flicks past is drawn in that rarity's own typeface and live gradient, not just the landed one.
+- Six new rarities joined the pool: Corrupted, Ethereal, Quantum, Neon, Void and Prismatic — eighteen rarities from Common to Divine.
+- Reveal bursts are now made of spinning voxel pixels that tumble and shrink as they fade — the game's signature particle.
+- A quiet ambient voxel field drifts behind the stage: faint pixels rising through the dark, giving the screen depth without stealing attention.
+- The roll button's landing pulse is now a voxel ring — a square outline that twists into a diamond as it expands.
+- New icon shapes for the morphing stage icon: gem, blade, pixel and pixelstar.
+
 ## 1.2.0 — 2026-11-16 — Voxel update
 
 - Switching tabs now breaks the screen into 3D pixels: every pixel of the current view lifts off, tumbles through space and re-settles as a pixel of the next view. Slow on purpose, and best experienced with sound on.

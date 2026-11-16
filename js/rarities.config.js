@@ -30,12 +30,9 @@
    icon      string  optional  Stage/inventory shape. One of:
                              circle, square, triangle, diamond, pentagon,
                              hexagon, octagon, star4, star5, star6, star8,
-                             burst, cross, shield, chevron, crescent, droplet.
+                             burst, cross, shield, chevron, crescent, droplet,
+                             gem, blade, pixel, pixelstar.
                              The stage icon morphs smoothly between shapes.
-   shape     string  optional  Inventory card shape. One of:
-                             soft (rounded rect), sharp, pill, cut (chamfered
-                             corners), hex (hexagon), round (circle).
-                             Default: 'soft'.
    hover     string  optional  Subtle card hover/press effect. One of:
                              lift, glow, underline, tilt, sheen, pulse, scan,
                              twinkle, hue, dust. Default: 'lift'.
@@ -48,11 +45,15 @@
                              text = fills the gradient name text
                              icon = replaces the shape icon in cards
 
+   NOTE: inventory cards are always crisp squares now — shape is no longer
+   configurable (removed in 1.3.0 to keep the collection looking like one
+   coherent deck).
+
    ── TIER GUIDE (what players see) ─────────────────────────────────────────
      1-2  name animation only — quiet, elegant
      3-4  + soft flash
-     5-6  + fine light streaks (sparks)
-     7-8  + more sparks, soft orbs
+     5-6  + fine voxel sparks
+     7-8  + more voxels, soft orbs
      9+   + shockwave rings, full choreography
    ============================================================================ */
 
@@ -68,7 +69,6 @@ const RARITY_CONFIG = [
     glow: 'rgba(154,163,173,0.4)',
     font: 'Space Grotesk',
     icon: 'circle',
-    shape: 'soft',
     hover: 'lift',
     speed: 1.4,
   },
@@ -83,7 +83,6 @@ const RARITY_CONFIG = [
     glow: 'rgba(74,222,128,0.45)',
     font: 'Chakra Petch',
     icon: 'triangle',
-    shape: 'soft',
     hover: 'glow',
     speed: 1.25,
   },
@@ -98,8 +97,21 @@ const RARITY_CONFIG = [
     glow: 'rgba(96,165,250,0.55)',
     font: 'Michroma',
     icon: 'diamond',
-    shape: 'pill',
     hover: 'underline',
+  },
+
+  /* ── CORRUPTED — new in 1.3.0 ───────────────────────────────────────── */
+  {
+    id: 'corrupted',
+    name: 'Corrupted',
+    weight: 9000,
+    tier: 3,
+    colors: ['#86efac', '#166534', '#a3e635'],
+    glow: 'rgba(134,239,172,0.45)',
+    font: 'Major Mono Display',
+    icon: 'pixel',
+    hover: 'scan',
+    speed: 1.15,
   },
 
   /* ── EPIC ───────────────────────────────────────────────────────────── */
@@ -112,11 +124,10 @@ const RARITY_CONFIG = [
     glow: 'rgba(192,132,252,0.55)',
     font: 'Syne',
     icon: 'pentagon',
-    shape: 'cut',
     hover: 'tilt',
   },
 
-  /* ── ANCIENT — new in 1.2.0 ────────────────────────────────────────── */
+  /* ── ANCIENT ─────────────────────────────────────────────────────────── */
   {
     id: 'ancient',
     name: 'Ancient',
@@ -126,9 +137,22 @@ const RARITY_CONFIG = [
     glow: 'rgba(214,169,124,0.5)',
     font: 'MedievalSharp',
     icon: 'shield',
-    shape: 'cut',
     hover: 'dust',
     speed: 0.95,
+  },
+
+  /* ── ETHEREAL — new in 1.3.0 ────────────────────────────────────────── */
+  {
+    id: 'ethereal',
+    name: 'Ethereal',
+    weight: 3400,
+    tier: 4,
+    colors: ['#e2e8f0', '#94a3b8', '#cbd5e1'],
+    glow: 'rgba(226,232,240,0.5)',
+    font: 'Cormorant Garamond',
+    icon: 'droplet',
+    hover: 'twinkle',
+    speed: 1.05,
   },
 
   /* ── LEGENDARY ──────────────────────────────────────────────────────── */
@@ -141,11 +165,10 @@ const RARITY_CONFIG = [
     glow: 'rgba(251,191,36,0.6)',
     font: 'Cinzel',
     icon: 'star5',
-    shape: 'hex',
     hover: 'sheen',
   },
 
-  /* ── FABLED — new in 1.2.0 ────────────────────────────────────────── */
+  /* ── FABLED ──────────────────────────────────────────────────────────── */
   {
     id: 'fabled',
     name: 'Fabled',
@@ -155,41 +178,79 @@ const RARITY_CONFIG = [
     glow: 'rgba(45,212,191,0.55)',
     font: 'Fraunces',
     icon: 'star6',
-    shape: 'soft',
-    hover: 'twinkle',
+    hover: 'pulse',
     speed: 0.95,
+  },
+
+  /* ── QUANTUM — new in 1.3.0 ─────────────────────────────────────────── */
+  {
+    id: 'quantum',
+    name: 'Quantum',
+    weight: 1600,
+    tier: 5,
+    colors: ['#22d3ee', '#e879f9', '#a5f3fc'],
+    glow: 'rgba(232,121,249,0.55)',
+    font: 'Bungee',
+    icon: 'gem',
+    hover: 'sheen',
   },
 
   /* ── MYTHIC ─────────────────────────────────────────────────────────── */
   {
     id: 'mythic',
     name: 'Mythic',
-    weight: 1800,
+    weight: 1200,
     tier: 6,
     colors: ['#f472b6', '#e11d48', '#fda4af'],
     glow: 'rgba(244,114,182,0.6)',
     font: 'Grenze Gotisch',
     icon: 'hexagon',
-    shape: 'sharp',
     hover: 'pulse',
+  },
+
+  /* ── NEON — new in 1.3.0 ────────────────────────────────────────────── */
+  {
+    id: 'neon',
+    name: 'Neon',
+    weight: 900,
+    tier: 6,
+    colors: ['#f0abfc', '#d946ef', '#fbcfe8'],
+    glow: 'rgba(240,171,252,0.6)',
+    font: 'Zen Dots',
+    icon: 'blade',
+    hover: 'hue',
+    speed: 1.1,
+  },
+
+  /* ── VOID — new in 1.3.0 ────────────────────────────────────────────── */
+  {
+    id: 'void',
+    name: 'Void',
+    weight: 600,
+    tier: 6,
+    colors: ['#c4b5fd', '#1e1b4b', '#8b5cf6'],
+    glow: 'rgba(139,92,246,0.6)',
+    font: 'Anton',
+    icon: 'pixelstar',
+    hover: 'dust',
+    speed: 0.9,
   },
 
   /* ── EXOTIC ─────────────────────────────────────────────────────────── */
   {
     id: 'exotic',
     name: 'Exotic',
-    weight: 800,
+    weight: 450,
     tier: 7,
     colors: ['#22d3ee', '#06b6d4', '#a5f3fc'],
     glow: 'rgba(34,211,238,0.6)',
     font: 'Audiowide',
     icon: 'chevron',
-    shape: 'hex',
     hover: 'scan',
     images: { art: 'assets/patterns/grid.svg' },
   },
 
-  /* ── RADIANT — new in 1.2.0 ───────────────────────────────────────── */
+  /* ── RADIANT ─────────────────────────────────────────────────────────── */
   {
     id: 'radiant',
     name: 'Radiant',
@@ -199,7 +260,6 @@ const RARITY_CONFIG = [
     glow: 'rgba(245,158,11,0.6)',
     font: 'Righteous',
     icon: 'burst',
-    shape: 'cut',
     hover: 'pulse',
     speed: 0.9,
   },
@@ -214,9 +274,22 @@ const RARITY_CONFIG = [
     glow: 'rgba(139,92,246,0.65)',
     font: 'Syncopate',
     icon: 'star4',
-    shape: 'hex',
     hover: 'twinkle',
     images: { art: 'assets/patterns/stars.svg' },
+  },
+
+  /* ── PRISMATIC — new in 1.3.0 ───────────────────────────────────────── */
+  {
+    id: 'prismatic',
+    name: 'Prismatic',
+    weight: 220,
+    tier: 8,
+    colors: ['#f0abfc', '#67e8f9', '#fde047'],
+    glow: 'rgba(240,171,252,0.65)',
+    font: 'Playfair Display',
+    icon: 'pixelstar',
+    hover: 'hue',
+    speed: 0.85,
   },
 
   /* ── DIVINE ─────────────────────────────────────────────────────────── */
@@ -229,7 +302,6 @@ const RARITY_CONFIG = [
     glow: 'rgba(255,191,105,0.7)',
     font: 'Monoton',
     icon: 'star8',
-    shape: 'hex',
     hover: 'hue',
     speed: 0.9,
   },
@@ -246,7 +318,6 @@ const RARITY_CONFIG = [
        glow: 'rgba(255,107,107,0.55)',
        font: 'Bebas Neue',        // any family from css/fonts.css
        icon: 'burst',             // optional: stage shape (see list above)
-       shape: 'cut',              // optional: card shape
        hover: 'sheen',            // optional: card hover effect
        speed: 1,                  // optional: animation speed (lower = slower)
        images: {                  // optional: image layers
