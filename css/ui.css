@@ -57,20 +57,29 @@
   gap: var(--space-5);
 }
 
-.bar-stat {
-  font-size: var(--text-xs);
+/* micro-labeled stat chips: tiny uppercase label above the value */
+.stat-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  min-width: 52px;
+}
+
+.stat-label {
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
   color: var(--color-text-faint);
-  letter-spacing: 0.06em;
-  font-variant-numeric: tabular-nums lining-nums;
 }
 
-.bar-stat b {
+.stat-chip b {
+  font-size: var(--text-sm);
+  font-weight: 600;
   color: var(--color-text-muted);
-  font-weight: 600;
-}
-
-#stat-best-wrap b {
-  font-weight: 600;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums lining-nums;
+  line-height: 1.2;
 }
 
 .icon-btn {
@@ -298,15 +307,36 @@
   border-radius: 4px;
   padding: var(--space-4);
   background: rgba(255, 255, 255, 0.018);
-  transition: border-color var(--transition-ui), background var(--transition-ui);
+  position: relative;
+  transition: border-color var(--transition-ui), background var(--transition-ui),
+    transform var(--transition-ui), box-shadow var(--transition-ui);
+}
+
+.style-item:hover {
+  border-color: rgba(var(--acc-rgb, 255, 255, 255), 0.35);
+  background: rgba(255, 255, 255, 0.035);
+  transform: translateY(-1px);
 }
 
 .style-item.active {
-  border-color: rgba(var(--acc), 0.45);
+  border-color: rgba(var(--acc-rgb), 0.45);
   background: rgba(255, 255, 255, 0.03);
 }
 
+/* equipped marker: a short accent rule on the left edge */
+.style-item.active::before {
+  content: '';
+  position: absolute;
+  left: -1px;
+  top: 22%;
+  bottom: 22%;
+  width: 2px;
+  background: var(--acc-hex, var(--acc));
+  border-radius: 2px;
+}
+
 .style-item.locked { opacity: 0.75; }
+.style-item.locked:hover { transform: none; }
 
 .pedestal-wrap {
   display: grid;
@@ -343,7 +373,7 @@
 
 .style-activate {
   padding: var(--space-2) var(--space-5);
-  border: 1px solid rgba(var(--acc), 0.5);
+  border: 1px solid rgba(var(--acc-rgb), 0.5);
   border-radius: 3px;
   color: var(--acc);
   transition: background var(--transition-ui), color var(--transition-ui),
@@ -351,13 +381,13 @@
 }
 
 .style-activate:hover {
-  background: var(--acc);
+  background: var(--acc-hex, var(--acc));
   color: #0b0b0d;
 }
 
 .active-badge {
   color: var(--acc);
-  border: 1px solid rgba(var(--acc), 0.35);
+  border: 1px solid rgba(var(--acc-rgb), 0.35);
   border-radius: 3px;
   padding: var(--space-2) var(--space-5);
 }
@@ -387,7 +417,7 @@
 .style-progress i {
   display: block;
   height: 100%;
-  background: var(--acc);
+  background: var(--acc-hex, var(--acc));
   opacity: 0.7;
 }
 

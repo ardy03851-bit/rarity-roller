@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.5.0 — 2026-11-16 — Solid cube
+
+- The shop pedestals are now one solid cube: opaque faces shaded by a single light direction, with a pixel texture that flows around the corners without a seam — no more stacked layers. A soft contact shadow grounds each cube to the floor.
+- Six new rarities: Frostborn, Molten, Static, Eclipsed, Hallowed and Omega — twenty-four rarities from Common to Omega, each with its own font, icon and odds.
+- The header stats are now micro-labeled chips — a tiny uppercase ROLLS / BEST above each value.
+- The accent color of shop cards now actually tints their borders and progress bars — a quiet bug where the color silently fell back to gray is fixed.
+
 ## 1.4.0 — 2026-11-16 — Styles shop
 
 - The roll is now a reel: rarity names sweep up through the stage like a physical slot reel, fast and fluid at first, then settling — and a held beat of stillness right before the landing. Hairline rules in your accent color frame the name while it spins.

@@ -113,7 +113,7 @@ function discoveredCount(save) {
   /* color at palette phase p (0..palette.length cycles) */
   function paletteAt(pal, p) {
     const n = pal.length;
-    const i = Math.floor(p) % n;
+    const i = ((Math.floor(p) % n) + n) % n; /* safe for negative phases */
     const j = (i + 1) % n;
     const f = smooth(p - Math.floor(p));
     const a = pal[i], b = pal[j];
@@ -128,16 +128,22 @@ function discoveredCount(save) {
    * draw one pedestal frame
    * ctx, size: css pixels (canvas is DPR-scaled by caller)
    * pal: [[r,g,b],...]  t: seconds  locked: grayscale + lock glyph
+   *
+   * The pedestal is ONE solid cube: three opaque faces shaded by a
+   * single light direction (top brightest, front mid, right dark),
+   * with a pixel texture that flows continuously around the corner —
+   * the pattern is keyed to the pixel's position in cube space, so
+   * front and right faces share columns and the seam never shows.
    */
   function drawPedestal(ctx, size, pal, t, locked, accent, shape = 'circle') {
     const W = size, H = size;
     ctx.clearRect(0, 0, W, H);
-    const cx = W / 2, cy = H / 2 + 26;
+    const cx = W / 2, cy = H / 2 + 24;
     const accentRGB = hexToRgb(accent);
 
     /* floor glow */
-    const glow = ctx.createRadialGradient(cx, cy + 46, 0, cx, cy + 46, 70);
-    glow.addColorStop(0, `rgba(${accentRGB[0]},${accentRGB[1]},${accentRGB[2]},${locked ? 0.05 : 0.12})`);
+    const glow = ctx.createRadialGradient(cx, cy + 52, 0, cx, cy + 52, 74);
+    glow.addColorStop(0, `rgba(${accentRGB[0]},${accentRGB[1]},${accentRGB[2]},${locked ? 0.05 : 0.13})`);
     glow.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = glow;
     ctx.fillRect(0, 0, W, H);
@@ -146,23 +152,43 @@ function discoveredCount(save) {
     ctx.translate(cx, cy);
     ctx.rotate(-0.12); /* the little tilt to the side */
 
-    const FW = 56, FH = 42;      /* front face half-extents */
-    const DX = 30, DY = -17;     /* depth offset (up-right) */
+    const FW = 60, FH = 45;      /* front face half-extents */
+    const DX = 32, DY = -18;     /* depth offset (up-right) */
     const palN = pal.map(hexToRgb);
     if (locked) palN.forEach(c => { c[0] = c[1] = c[2] = Math.round((c[0] + c[1] + c[2]) / 3 * 0.6); });
 
-    /* back-to-front: right face, top face, then the front face */
-    drawFace(ctx,
-      [ [FW, -FH], [FW + DX, -FH + DY], [FW + DX, FH + DY], [FW, FH] ],
-      palN, t, 0.5, 4, 6, 2 * FH / 6, false, 'rgba(8,8,10,0.95)');
+    /* the cube's material color — the whole palette drifts through it */
+    const mat = paletteAt(palN, t * 0.06);
+    const CELL = 18;             /* world-space pixel size, uniform on all faces */
 
-    drawFace(ctx,
-      [ [-FW, -FH], [FW, -FH], [FW + DX, -FH + DY], [-FW + DX, -FH + DY] ],
-      palN, t + 3, 0.55, 7, 3, Math.hypot(DX, DY) / 3, false, 'rgba(22,22,26,0.95)');
+    /* soft contact shadow grounding the cube */
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.beginPath();
+    ctx.ellipse(0, FH + 7, FW + 14, 15, 0, 0, Math.PI * 2);
+    ctx.fill();
 
+    /* top face (light from above: full material color) */
     drawFace(ctx,
-      [ [-FW, -FH], [FW, -FH], [FW, FH], [-FW, FH] ],
-      palN, t + 6, 1, 7, 6, 2 * FH / 6, /* fade */ true, 'rgba(14,14,17,0.97)');
+      [[-FW, -FH], [FW, -FH], [FW + DX, -FH + DY], [-FW + DX, -FH + DY]],
+      mat, palN, t, 1.0, CELL, 0.2, false);
+
+    /* right face (turning away from the light) */
+    drawFace(ctx,
+      [[FW, -FH], [FW + DX, -FH + DY], [FW + DX, FH + DY], [FW, FH]],
+      mat, palN, t, 0.26, CELL, 0.07, false);
+
+    /* front face (mid light, pixels dissolve toward the floor) */
+    drawFace(ctx,
+      [[-FW, -FH], [FW, -FH], [FW, FH], [-FW, FH]],
+      mat, palN, t, 0.55, CELL, 0.15, true);
+
+    /* rim light along the top front edge */
+    ctx.strokeStyle = `rgba(${mat[0]},${mat[1]},${mat[2]},0.45)`;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(-FW, -FH);
+    ctx.lineTo(FW, -FH);
+    ctx.stroke();
 
     /* the 2D roll button standing on the front face */
     drawBtn(ctx, palN, t, locked, accentRGB, shape);
@@ -173,23 +199,38 @@ function discoveredCount(save) {
   const lerpP = (a, b, u) => [lerp(a[0], b[0], u), lerp(a[1], b[1], u)];
 
   /**
-   * draw a quad face: solid body fill + a pixel grid mapped with
-   * bilinear interpolation (so skewed faces stay geometrically true).
-   * A,B,C,D run around the quad; A→B is the "columns" edge, A→D "rows".
+   * draw one cube face: opaque shaded body + a pixel grid whose
+   * color phase is keyed to the pixel's position in cube space
+   * (local x/y before rotation), so the texture wraps around
+   * corners without a visible seam. A,B,C,D run around the quad.
    */
-  function drawFace(ctx, [A, B, C, D], palN, t, mul, cols, rows, cellH, fade, fill) {
-    /* solid body so the cube reads as one object */
-    ctx.fillStyle = fill;
-    ctx.beginPath();
-    ctx.moveTo(A[0], A[1]);
-    ctx.lineTo(B[0], B[1]);
-    ctx.lineTo(C[0], C[1]);
-    ctx.lineTo(D[0], D[1]);
-    ctx.closePath();
+  function drawFace(ctx, [A, B, C, D], mat, palN, t, shade, CELL, pixA, fade) {
+    const facePath = () => {
+      ctx.beginPath();
+      ctx.moveTo(A[0], A[1]);
+      ctx.lineTo(B[0], B[1]);
+      ctx.lineTo(C[0], C[1]);
+      ctx.lineTo(D[0], D[1]);
+      ctx.closePath();
+    };
+
+    /* opaque body — the cube is one solid mass, not stacked layers */
+    const sc = (v) => Math.max(0, Math.round(v * shade));
+    ctx.fillStyle = `rgb(${sc(mat[0])},${sc(mat[1])},${sc(mat[2])})`;
+    facePath();
     ctx.fill();
 
-    const cellW = Math.hypot(B[0] - A[0], B[1] - A[1]) / cols;
-    const pw = cellW * 0.72, ph = cellH * 0.72;
+    /* pixels sized from the face's true geometry, uniform cube-wide */
+    const wAB = Math.hypot(B[0] - A[0], B[1] - A[1]);
+    const wAD = Math.hypot(D[0] - A[0], D[1] - A[1]);
+    const cols = Math.max(1, Math.round(wAB / CELL));
+    const rows = Math.max(1, Math.round(wAD / CELL));
+    const pw = wAB / cols * 0.94, ph = wAD / rows * 0.94;
+
+    /* square pixels must never bleed past a skewed face edge */
+    ctx.save();
+    facePath();
+    ctx.clip();
 
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
@@ -199,16 +240,19 @@ function discoveredCount(save) {
         const bot = lerpP(D, C, u);
         const x = lerp(top[0], bot[0], v);
         const y = lerp(top[1], bot[1], v);
-        const col = paletteAt(palN, t * 0.12 + r * 0.45 + c * 0.18);
-        let a = (0.1 + 0.26 * (1 - r / rows)) * mul;
-        if (fade) a *= 0.3 + 0.7 * (1 - r / rows); /* vanish near the floor */
-        ctx.fillStyle = `rgba(${col[0]},${col[1]},${col[2]},${a})`;
+        /* phase keyed to cube-space position: flows around corners */
+        const phase = t * 0.07 + x * 0.011 + y * 0.021;
+        const col = paletteAt(palN, phase);
+        let a = pixA * (0.55 + 0.45 * Math.sin(phase * 40 + 1.7)); /* subtle per-pixel shimmer */
+        if (fade) a *= 1 - 0.62 * (r + 1) / rows; /* dissolve toward the floor */
+        ctx.fillStyle = `rgba(${col[0]},${col[1]},${col[2]},${a.toFixed(3)})`;
         ctx.fillRect(x - pw / 2, y - ph / 2, pw, ph);
       }
     }
+    ctx.restore();
 
     /* face edge, whisper-thin */
-    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.07)';
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(A[0], A[1]);

@@ -86,6 +86,19 @@ const RARITY_CONFIG = [
     hover: 'glow',
     speed: 1.25,
   },
+  /* ── FROSTBORN — new in 1.5.0 ────────────────────────────────────── */
+  {
+    id: 'frostborn',
+    name: 'Frostborn',
+    weight: 16000,
+    tier: 2,
+    colors: ['#bae6fd', '#38bdf8', '#e0f2fe'],
+    glow: 'rgba(186,230,253,0.45)',
+    font: 'Josefin Sans',
+    icon: 'octagon',
+    hover: 'glow',
+    speed: 1.2,
+},
 
   /* ── RARE ───────────────────────────────────────────────────────────── */
   {
@@ -140,6 +153,18 @@ const RARITY_CONFIG = [
     hover: 'dust',
     speed: 0.95,
   },
+  /* ── MOLTEN — new in 1.5.0 ────────────────────────────────────── */
+  {
+    id: 'molten',
+    name: 'Molten',
+    weight: 3700,
+    tier: 4,
+    colors: ['#fb923c', '#dc2626', '#fecaca'],
+    glow: 'rgba(251,146,60,0.5)',
+    font: 'Alfa Slab One',
+    icon: 'blade',
+    hover: 'sheen',
+    },
 
   /* ── ETHEREAL — new in 1.3.0 ────────────────────────────────────────── */
   {
@@ -194,6 +219,19 @@ const RARITY_CONFIG = [
     icon: 'gem',
     hover: 'sheen',
   },
+  /* ── STATIC — new in 1.5.0 ────────────────────────────────────── */
+  {
+    id: 'static',
+    name: 'Static',
+    weight: 2000,
+    tier: 5,
+    colors: ['#e5e7eb', '#6b7280', '#f3f4f6'],
+    glow: 'rgba(229,231,235,0.5)',
+    font: 'Rubik Mono One',
+    icon: 'square',
+    hover: 'scan',
+    speed: 1.1,
+},
 
   /* ── MYTHIC ─────────────────────────────────────────────────────────── */
   {
@@ -221,6 +259,19 @@ const RARITY_CONFIG = [
     hover: 'hue',
     speed: 1.1,
   },
+  /* ── ECLIPSED — new in 1.5.0 ────────────────────────────────────── */
+  {
+    id: 'eclipsed',
+    name: 'Eclipsed',
+    weight: 800,
+    tier: 6,
+    colors: ['#f59e0b', '#0b1120', '#334155'],
+    glow: 'rgba(245,158,11,0.5)',
+    font: 'Creepster',
+    icon: 'crescent',
+    hover: 'dust',
+    speed: 0.95,
+},
 
   /* ── VOID — new in 1.3.0 ────────────────────────────────────────────── */
   {
@@ -277,6 +328,19 @@ const RARITY_CONFIG = [
     hover: 'twinkle',
     images: { art: 'assets/patterns/stars.svg' },
   },
+  /* ── HALLOWED — new in 1.5.0 ────────────────────────────────────── */
+  {
+    id: 'hallowed',
+    name: 'Hallowed',
+    weight: 240,
+    tier: 8,
+    colors: ['#fef3c7', '#fde68a', '#fffbeb'],
+    glow: 'rgba(254,243,199,0.6)',
+    font: 'Poiret One',
+    icon: 'cross',
+    hover: 'twinkle',
+    speed: 0.85,
+},
 
   /* ── PRISMATIC — new in 1.3.0 ───────────────────────────────────────── */
   {
@@ -305,6 +369,19 @@ const RARITY_CONFIG = [
     hover: 'hue',
     speed: 0.9,
   },
+  /* ── OMEGA — new in 1.5.0 ────────────────────────────────────── */
+  {
+    id: 'omega',
+    name: 'Omega',
+    weight: 25,
+    tier: 9,
+    colors: ['#ff5f6d', '#ffc371', '#ffffff'],
+    glow: 'rgba(255,95,109,0.7)',
+    font: 'Orbitron',
+    icon: 'star8',
+    hover: 'hue',
+    speed: 0.9,
+},
 
   /* ============================================================================
      TEMPLATE — copy everything between the lines, paste above, edit:

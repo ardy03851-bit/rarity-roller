@@ -43,7 +43,7 @@ RARITIES-GUIDE.md      the full rarity manual (every field, every option)
 
 All rarity configuration lives in **one file**: [`js/rarities.config.js`](js/rarities.config.js). To add a rarity, paste the template block (included at the bottom of that file) into the list, edit the values, save, reload — no other file needs to change. Every field (weights, tiers, gradient colors, per-rarity fonts, morphing shape icons, card shapes, hover effects, image layers) is documented inline and in the full manual: [`RARITIES-GUIDE.md`](RARITIES-GUIDE.md).
 
-The 12 shipped rarities: Common, Uncommon, Rare, Epic, Ancient, Legendary, Fabled, Mythic, Exotic, Radiant, Celestial, Divine.
+The 24 shipped rarities: Common, Uncommon, Frostborn, Rare, Corrupted, Epic, Ancient, Molten, Ethereal, Legendary, Fabled, Quantum, Static, Mythic, Neon, Eclipsed, Void, Exotic, Radiant, Celestial, Hallowed, Prismatic, Divine, Omega.
 
 ## Adding a button style
 

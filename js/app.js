@@ -161,7 +161,7 @@
   function updateStats() {
     const s = window.RRStorage.current;
     const n = s.totalRolls;
-    els.statTotal.textContent = `${n.toLocaleString()} roll${n === 1 ? '' : 's'}`;
+    els.statTotal.textContent = n.toLocaleString();
     const best = s.bestId ? getRarity(s.bestId) : null;
     if (best) {
       els.statBest.replaceChildren(FX.textSpan(best, best.name));
@@ -242,6 +242,8 @@
       const item = document.createElement('article');
       item.className = 'style-item' + (unlocked ? '' : ' locked') + (active ? ' active' : '');
       item.style.setProperty('--acc', st.accent);
+      item.style.setProperty('--acc-rgb', window.RRPedestal.hexToRgb(st.accent).join(','));
+      item.style.setProperty('--acc-hex', st.accent);
 
       const ped = document.createElement('div');
       ped.className = 'pedestal-wrap';
