@@ -33,7 +33,8 @@ js/
   rarities.js            resolves the config + weighted RNG
   storage.js             durable save system (localStorage + IndexedDB mirror)
   changelog.js           changelog data + rarity-aware text renderer
-  app.js                 game loop, ticker, tabs, inventory
+  styles.js              button styles: unlocks, silhouettes + the 3D pedestal shop
+  app.js                 game loop, ticker, tabs, inventory, styles shop
 assets/patterns/       SVG textures available to rarity image layers
 RARITIES-GUIDE.md      the full rarity manual (every field, every option)
 ```
@@ -43,6 +44,10 @@ RARITIES-GUIDE.md      the full rarity manual (every field, every option)
 All rarity configuration lives in **one file**: [`js/rarities.config.js`](js/rarities.config.js). To add a rarity, paste the template block (included at the bottom of that file) into the list, edit the values, save, reload — no other file needs to change. Every field (weights, tiers, gradient colors, per-rarity fonts, morphing shape icons, card shapes, hover effects, image layers) is documented inline and in the full manual: [`RARITIES-GUIDE.md`](RARITIES-GUIDE.md).
 
 The 12 shipped rarities: Common, Uncommon, Rare, Epic, Ancient, Legendary, Fabled, Mythic, Exotic, Radiant, Celestial, Divine.
+
+## Adding a button style
+
+Button styles live in one list in [`js/styles.js`](js/styles.js): `id`, `name`, short description, a 3-color pixel palette for the pedestal, an `accent` for the roll button, a `btn` silhouette (`circle`, `circle-double`, `squircle`, `square`, `circle-dashed`, `circle-thick`, `circle-prism`), and an `unlock`/`progress` pair checked against the save after every roll. Paste a new block into `RR_STYLES`, reload — the shop, unlock toast and button silhouette pick it up automatically.
 
 ## Changelog format
 

@@ -130,6 +130,7 @@
 }
 
 .stage {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -155,24 +156,27 @@
 }
 
 /* ---------- roll button ---------- */
+/* the roll button takes its accent from the equipped button style */
 .roll-btn {
   position: relative;
   width: 118px;
   height: 118px;
   border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.22);
+  border: 1px solid rgba(var(--btn-accent-rgb, 201, 201, 212), 0.4);
   background: transparent;
   color: var(--color-text-muted);
   display: grid;
   place-items: center;
-  transition: transform var(--transition-ui), border-color var(--transition-ui);
+  transition: transform var(--transition-ui), border-color var(--transition-ui),
+    box-shadow var(--transition-ui);
   -webkit-user-select: none;
   user-select: none;
 }
 
 .roll-btn:hover {
-  border-color: rgba(255, 255, 255, 0.4);
+  border-color: rgba(var(--btn-accent-rgb, 201, 201, 212), 0.75);
   color: var(--color-text);
+  box-shadow: 0 0 26px -10px rgba(var(--btn-accent-rgb, 201, 201, 212), 0.5);
 }
 
 .roll-btn:active {
@@ -192,6 +196,23 @@
   transition: color var(--transition-ui);
 }
 
+/* ---------- button style silhouettes ---------- */
+/* each equipped style reshapes the roll button to match its
+   pedestal rendering. Only border/box-shadow properties, so the
+   voxel tab snapshot stays renderable. */
+.roll-btn.bs-verdant { border-radius: 30%; }
+.roll-btn.bs-prism { border-radius: 22%; }
+.roll-btn.bs-ember {
+  box-shadow: 0 0 0 5px rgba(var(--btn-accent-rgb, 201, 201, 212), 0.14);
+}
+.roll-btn.bs-ember:hover {
+  box-shadow: 0 0 0 5px rgba(var(--btn-accent-rgb, 201, 201, 212), 0.22),
+    0 0 26px -10px rgba(var(--btn-accent-rgb, 201, 201, 212), 0.5);
+}
+.roll-btn.bs-void { border-style: dashed; }
+.roll-btn.bs-aurum { border-width: 2.5px; }
+.roll-btn.bs-chroma { border-color: rgba(var(--btn-accent-rgb, 240, 171, 252), 0.55); }
+
 /* spinning state: thin conic ring travels the border */
 .roll-btn.spinning {
   border-color: transparent;
@@ -201,12 +222,12 @@
   content: '';
   position: absolute;
   inset: -1px;
-  border-radius: 50%;
+  border-radius: inherit;
   background: conic-gradient(
     from var(--ga, 0deg),
     transparent 0deg,
     transparent 250deg,
-    rgba(255, 255, 255, 0.65) 340deg,
+    rgba(var(--btn-accent-rgb, 201, 201, 212), 0.85) 340deg,
     transparent 360deg
   );
   animation: beam-spin 1.1s linear infinite;
@@ -224,7 +245,8 @@
 
 /* ---------- inventory ---------- */
 #view-inventory .view-head,
-#view-changelog .view-head {
+#view-changelog .view-head,
+#view-styles .view-head {
   max-width: 680px;
   margin: 0 auto var(--space-8);
   text-align: center;
@@ -255,6 +277,153 @@
   margin: 0 auto;
 }
 
+/* ============================================================
+   STYLES SHOP — 3D pedestals + activate buttons
+   ============================================================ */
+.styles-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.style-item {
+  display: grid;
+  grid-template-columns: 210px 1fr;
+  align-items: center;
+  gap: var(--space-6);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 4px;
+  padding: var(--space-4);
+  background: rgba(255, 255, 255, 0.018);
+  transition: border-color var(--transition-ui), background var(--transition-ui);
+}
+
+.style-item.active {
+  border-color: rgba(var(--acc), 0.45);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.style-item.locked { opacity: 0.75; }
+
+.pedestal-wrap {
+  display: grid;
+  place-items: center;
+}
+
+.style-info { min-width: 0; }
+
+.style-info h3 {
+  font-size: var(--text-base);
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-text);
+}
+
+.style-item.active .style-info h3 { color: var(--acc); }
+
+.style-desc {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  margin-top: var(--space-2);
+  line-height: 1.5;
+}
+
+.style-state {
+  display: inline-block;
+  margin-top: var(--space-4);
+  font-size: var(--text-xs);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.style-activate {
+  padding: var(--space-2) var(--space-5);
+  border: 1px solid rgba(var(--acc), 0.5);
+  border-radius: 3px;
+  color: var(--acc);
+  transition: background var(--transition-ui), color var(--transition-ui),
+    border-color var(--transition-ui);
+}
+
+.style-activate:hover {
+  background: var(--acc);
+  color: #0b0b0d;
+}
+
+.active-badge {
+  color: var(--acc);
+  border: 1px solid rgba(var(--acc), 0.35);
+  border-radius: 3px;
+  padding: var(--space-2) var(--space-5);
+}
+
+.style-req {
+  margin-top: var(--space-4);
+  max-width: 260px;
+}
+
+.style-req-label {
+  display: block;
+  font-size: var(--text-xs);
+  letter-spacing: 0.08em;
+  color: var(--color-text-faint);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.style-progress {
+  display: block;
+  margin-top: var(--space-2);
+  height: 2px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 1px;
+  overflow: hidden;
+}
+
+.style-progress i {
+  display: block;
+  height: 100%;
+  background: var(--acc);
+  opacity: 0.7;
+}
+
+/* toast */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: max(var(--space-6), env(safe-area-inset-bottom, 0px));
+  transform: translate(-50%, 12px);
+  padding: var(--space-3) var(--space-6);
+  border: 1px solid rgba(var(--btn-accent-rgb, 201, 201, 212), 0.4);
+  border-radius: 3px;
+  background: rgba(13, 13, 16, 0.92);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  letter-spacing: 0.05em;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 80;
+  transition: opacity 300ms ease-out, transform 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+@media (max-width: 640px) {
+  .style-item {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+  }
+  .style-req { margin-inline: auto; }
+}
+
 /* keep the floating tabs toggle clear of the cards */
 .inv-grid {
   padding-right: 60px;
@@ -264,6 +433,12 @@
   .inv-grid {
     padding-right: 92px;
   }
+}
+
+/* keep the toggle clear of shop items on narrow screens too */
+.styles-list { padding-right: 60px; }
+@media (min-width: 900px) {
+  .styles-list { padding-right: 0; }
 }
 
 /* voxel transition overlay */

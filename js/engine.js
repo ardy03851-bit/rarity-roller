@@ -376,6 +376,7 @@
      ========================================================== */
   FX.flash = (color = 'rgba(255,255,255,1)', duration = 400, strength = 0.14) => {
     const layer = $('#flash-layer');
+    if (!layer) return;
     layer.style.background = color;
     layer.style.transition = 'none';
     layer.style.opacity = String(strength);
@@ -388,6 +389,37 @@
   FX.center = (el) => {
     const r = el.getBoundingClientRect();
     return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  };
+
+  /* The landing veil: a block of pixels in the rarity's color
+     covering the result, dissolving away cell by cell to unveil
+     the name underneath. 2D, cheap, and it reads as voxels. */
+  FX.dissolve = (color = '#ffffff', cell = 28) => {
+    const veil = document.querySelector('.dissolve-veil');
+    if (!veil) return;
+    /* cover exactly the name line, whatever the viewport */
+    const name = document.getElementById('stage-name');
+    const stage = veil.closest('.stage');
+    if (name && stage) {
+      const sr = stage.getBoundingClientRect();
+      const nr = name.getBoundingClientRect();
+      veil.style.top = `${Math.max(0, nr.top - sr.top - 12)}px`;
+      veil.style.height = `${nr.height + 24}px`;
+    }
+    const cols = Math.max(8, Math.floor(veil.clientWidth / cell));
+    const rows = Math.max(2, Math.floor(veil.clientHeight / cell));
+    const grid = document.createElement('div');
+    grid.className = 'veil-grid';
+    grid.style.setProperty('--veil', color);
+    grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+    for (let i = 0; i < cols * rows; i++) {
+      const c = document.createElement('i');
+      c.style.setProperty('--dl', (Math.random() * 0.34).toFixed(3) + 's');
+      grid.appendChild(c);
+    }
+    veil.replaceChildren(grid);
+    requestAnimationFrame(() => requestAnimationFrame(() => grid.classList.add('on')));
+    setTimeout(() => { if (veil.firstChild === grid) veil.replaceChildren(); }, 1400);
   };
 
   /* ==========================================================

@@ -7,6 +7,19 @@
 
 const CHANGELOG = [
   {
+    version: '1.4.0',
+    date: '2026-11-16',
+    tag: 'Styles shop',
+    notes: [
+      'The roll is now a **reel**: rarity names sweep up through the stage like a physical slot reel, fast and fluid at first, then settling — and a held beat of stillness right before the landing. Hairline rules in your accent color frame the name while it spins.',
+      'A new **Styles** tab: a shop of button styles you unlock by playing. Roll counts, rarities found, best tiers — each achievement hands you a new look for the roll button and its spinning ring.',
+      'Every style stands on its own **3D pedestal** — a canvas-rendered cube, slightly tilted, wearing a pixel texture that fades toward the floor and slowly drifts through the style\'s color palette. Locked styles show their pedestal in grayscale with a lock on the button.',
+      'Equipping a style does more than recolor: each one has its own **silhouette** for the roll button — a plain ring, a double ring, a squircle, a rounded square, a dashed or thick border — and the pedestal in the shop shows exactly that shape standing on the cube.',
+      'The landing now has an **unveil**: a veil of pixels in the landed rarity\'s color covers the name and dissolves away cell by cell as the result lands.',
+      'Unlocks are checked after every roll, with a quiet toast when something new opens up. Progress bars show exactly how far each locked style is.',
+    ],
+  },
+  {
     version: '1.3.0',
     date: '2026-11-16',
     tag: 'Pixel perfect',

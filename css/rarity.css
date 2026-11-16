@@ -55,13 +55,15 @@
   font-weight: 700;
   letter-spacing: 0.02em;
   text-transform: uppercase;
-  animation: tick-in 110ms ease-out;
+  /* each name sweeps up through the line like a physical reel;
+     --d is set per tick by the app to match the roll's tempo */
+  animation: tick-in calc(var(--d, 110ms) * 0.92) cubic-bezier(0.2, 0.7, 0.3, 1);
 }
 
 /* the ticker ALWAYS wears the rarity's typeface + live gradient */
 .stage-name .tick.rar-text {
   animation:
-    tick-in 110ms ease-out,
+    tick-in calc(var(--d, 110ms) * 0.92) cubic-bezier(0.2, 0.7, 0.3, 1),
     rar-text-flow calc(6s * var(--fx-speed, 1)) linear infinite;
 }
 
@@ -77,15 +79,65 @@
 }
 
 @keyframes tick-in {
-  from { opacity: 0.2; transform: translateY(0.35em) scale(0.985); }
+  from { opacity: 0; transform: translateY(0.8em) scale(0.99); }
+  40% { opacity: 1; }
   to { opacity: 1; transform: none; }
 }
 
 @keyframes land-in {
-  0% { opacity: 0; transform: scale(0.9); filter: drop-shadow(0 0 0 transparent); }
-  55% { opacity: 1; transform: scale(1.035); }
-  100% { opacity: 1; transform: scale(1); }
+  0% { opacity: 0; transform: scale(0.86) translateY(0.15em); filter: drop-shadow(0 0 0 transparent); }
+  55% { opacity: 1; transform: scale(1.045) translateY(-0.02em); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
 }
+
+/* the pixel veil that dissolves to unveil the result */
+.dissolve-veil {
+  position: absolute;
+  top: 0;
+  left: -34px;
+  right: -34px;
+  pointer-events: none;
+  z-index: 3;
+}
+.veil-grid {
+  display: grid;
+  width: 100%;
+  height: 100%;
+}
+.veil-grid i {
+  background: var(--veil, #fff);
+  opacity: 0.5;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.22);
+  transition: opacity 0.4s ease var(--dl), transform 0.4s ease var(--dl);
+}
+.veil-grid.on i {
+  opacity: 0;
+  transform: scale(0.86);
+}
+
+/* reel hairlines: thin accent rules above and below the name while spinning */
+.stage-name { position: relative; }
+.stage-name::before,
+.stage-name::after {
+  content: '';
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(var(--btn-accent-rgb, 201, 201, 212), 0.45),
+    transparent
+  );
+  opacity: 0;
+  transition: opacity 350ms ease-out;
+  pointer-events: none;
+}
+.stage-name::before { top: -0.32em; }
+.stage-name::after { bottom: 0.06em; }
+body.spinning .stage-name::before,
+body.spinning .stage-name::after { opacity: 1; }
 
 /* divine: slow spectrum drift on top of the flow */
 .t9 .rar-text {
@@ -145,7 +197,7 @@
 
 @keyframes ring-pulse {
   from { opacity: 0.85; transform: scale(0.92) rotate(0deg); }
-  to { opacity: 0; transform: scale(1.38) rotate(45deg); }
+  to { opacity: 0; transform: scale(1.26) rotate(45deg); }
 }
 
 /* ============================================================

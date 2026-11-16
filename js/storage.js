@@ -49,6 +49,8 @@
       lastId: null,        // last rarity rolled
       lastAt: 0,
       history: [],        // recent rolls: [{ id, at }]
+      unlockedStyles: ['classic'],  // button style ids unlocked
+      activeStyle: 'classic',        // currently equipped button style
     };
   }
 
@@ -164,6 +166,12 @@
       requestPersistence();
       const save = await readSave();
       if (save) {
+        // migrate older saves to the latest shape
+        if (!Array.isArray(save.unlockedStyles)) save.unlockedStyles = ['classic'];
+        if (!save.unlockedStyles.includes('classic')) save.unlockedStyles.unshift('classic');
+        if (!save.activeStyle || !save.unlockedStyles.includes(save.activeStyle)) {
+          save.activeStyle = 'classic';
+        }
         // heal whichever store was missing/corrupt
         writeSave(save);
         return save;
@@ -198,6 +206,22 @@
       }
     },
 
+    unlockStyle(styleId) {
+      const s = this.current;
+      if (!s.unlockedStyles.includes(styleId)) {
+        s.unlockedStyles.push(styleId);
+        flush(s);
+      }
+    },
+
+    setActiveStyle(styleId) {
+      const s = this.current;
+      if (s.unlockedStyles.includes(styleId)) {
+        s.activeStyle = styleId;
+        flush(s);
+      }
+    },
+
     flushNow() {
       clearTimeout(timer);
       if (this.current) writeSave(this.current);
@@ -214,6 +238,8 @@
   // ensure "this" works in record()
   Storage.record = Storage.record.bind(Storage);
   Storage.markSeen = Storage.markSeen.bind(Storage);
+  Storage.unlockStyle = Storage.unlockStyle.bind(Storage);
+  Storage.setActiveStyle = Storage.setActiveStyle.bind(Storage);
 
   /* last-chance flush when leaving the page */
   addEventListener('pagehide', () => Storage.flushNow());

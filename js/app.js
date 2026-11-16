@@ -18,13 +18,15 @@
     statTotal: $('#stat-total'),
     statBest: $('#stat-best'),
     invGrid: $('#inv-grid'),
+    stylesList: $('#styles-list'),
+    toast: $('#toast'),
     tabsToggle: $('#tabs-toggle'),
     tabsMenu: $('#tabs-menu'),
     soundToggle: $('#sound-toggle'),
   };
 
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-  const easeOutQuad = (t) => 1 - (1 - t) * (1 - t);
+  const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
 
   let spinning = false;
   let transitioning = false;
@@ -70,9 +72,12 @@
   }
 
   /* ==========================================================
-     ROLL — decelerating name ticker
+     ROLL — reel-style decelerating ticker
+     Names sweep up through the stage like a physical reel:
+     fast phase flows, slow phase settles, and a held beat of
+     stillness right before the landing sells the near-miss.
      ========================================================== */
-  function buildSequence(target, length = 22) {
+  function buildSequence(target, length = 26) {
     const seq = [];
     for (let i = 0; i < length; i++) seq.push(rollRarity());
     seq[length - 1] = target;
@@ -84,6 +89,7 @@
     spinning = true;
     els.rollBtn.disabled = true;
     els.rollBtn.classList.add('spinning');
+    document.body.classList.add('spinning');
     els.stageMeta.innerHTML = '';
 
     const target = rollRarity();
@@ -92,15 +98,19 @@
     const TICKS = seq.length;
     for (let i = 0; i < TICKS; i++) {
       const r = seq[i];
-      els.stageName.replaceChildren(FX.tick(r));
+      const tick = FX.tick(r);
+      const k = i / (TICKS - 1);              // 0 → 1
+      const d = 62 + Math.pow(k, 3.4) * 330;   // 62ms → ~392ms, slow only at the end
+      tick.style.setProperty('--d', `${d}ms`);
+      els.stageName.replaceChildren(tick);
       morphIcon(r);
       // quiet tick, skipping the fastest beats so it never machine-guns
-      if (i < TICKS - 1 && i % 2 === 0) FX.sound.tick();
-      const k = i / (TICKS - 1);            // 0 → 1
-      const speed = easeOutQuad(k);          // 0 → 1, decelerating
-      await wait(18 + speed * speed * 320);  // 18ms → ~338ms
+      if (d > 90 && i % 2 === 0) FX.sound.tick();
+      await wait(d);
     }
 
+    // the held breath: the result is already on the line — let it sit
+    await wait(340);
     land(target);
   }
 
@@ -109,10 +119,12 @@
     window.RRStorage.record(rarity);
     const isNew = before === 0;
 
-    // landed name
+    // landed name — unveiled as the pixel veil dissolves
+    FX.dissolve(rarity.colors[1] || rarity.colors[0]);
     els.stageName.replaceChildren(FX.landed(rarity));
     morphIcon(rarity);
     els.rollBtn.classList.remove('spinning');
+    document.body.classList.remove('spinning');
     els.rollBtn.disabled = false;
 
     // ring pulse in the rarity's color
@@ -126,6 +138,9 @@
       `1 in ${Math.round(TOTAL_WEIGHT / rarity.weight).toLocaleString()} · owned ${window.RRStorage.current.counts[rarity.id]}`,
       isNew
     );
+
+    // style unlocks are achievement-based: re-check after every roll
+    syncUnlocks(false);
 
     const rect = els.stageName.getBoundingClientRect();
     FX.playReveal(rarity, els.stageName, {
@@ -174,6 +189,132 @@
   }
 
   /* ==========================================================
+     BUTTON STYLES — the 3D pedestal shop
+     ========================================================== */
+  let shopLoopOn = false;
+  let shopCanvases = [];
+
+  function getStyle(id) {
+    return RR_STYLES.find((st) => st.id === id) || RR_STYLES[0];
+  }
+
+  function applyStyle(style) {
+    const rgb = window.RRPedestal.hexToRgb(style.accent);
+    document.documentElement.style.setProperty('--btn-accent-rgb', rgb.join(','));
+    /* the button itself wears the style's silhouette */
+    els.rollBtn.className = 'roll-btn bs-' + style.id;
+  }
+
+  function toast(text, accent) {
+    els.toast.textContent = text;
+    els.toast.style.setProperty('--btn-accent-rgb', accent || '201,201,212');
+    els.toast.classList.add('show');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => els.toast.classList.remove('show'), 3200);
+  }
+
+  /* check unlock conditions; toast any new ones */
+  function syncUnlocks(quiet = true) {
+    const s = window.RRStorage.current;
+    let changed = false;
+    for (const st of RR_STYLES) {
+      if (s.unlockedStyles.includes(st.id)) continue;
+      if (st.unlock(s)) {
+        window.RRStorage.unlockStyle(st.id);
+        changed = true;
+        if (!quiet) {
+          toast(`Button style unlocked — ${st.name}`, window.RRPedestal.hexToRgb(st.accent).join(','));
+          FX.sound.reveal(5);
+        }
+      }
+    }
+    if (changed) renderShop();
+  }
+
+  function renderShop() {
+    const s = window.RRStorage.current;
+    els.stylesList.replaceChildren();
+    shopCanvases = [];
+
+    for (const st of RR_STYLES) {
+      const unlocked = s.unlockedStyles.includes(st.id);
+      const active = s.activeStyle === st.id;
+      const item = document.createElement('article');
+      item.className = 'style-item' + (unlocked ? '' : ' locked') + (active ? ' active' : '');
+      item.style.setProperty('--acc', st.accent);
+
+      const ped = document.createElement('div');
+      ped.className = 'pedestal-wrap';
+      const canvas = document.createElement('canvas');
+      const SIZE = 210;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = SIZE * dpr;
+      canvas.height = SIZE * dpr;
+      canvas.style.width = `${SIZE}px`;
+      canvas.style.height = `${SIZE}px`;
+      ped.appendChild(canvas);
+      item.appendChild(ped);
+      shopCanvases.push({ canvas, style: st, locked: !unlocked, dpr });
+
+      const info = document.createElement('div');
+      info.className = 'style-info';
+      info.innerHTML = `
+        <h3>${st.name}</h3>
+        <p class="style-desc">${st.desc}</p>
+      `;
+
+      if (active) {
+        const badge = document.createElement('span');
+        badge.className = 'style-state active-badge';
+        badge.textContent = 'Active';
+        info.appendChild(badge);
+      } else if (unlocked) {
+        const btn = document.createElement('button');
+        btn.className = 'style-state style-activate';
+        btn.textContent = 'Activate';
+        btn.addEventListener('click', () => {
+          window.RRStorage.setActiveStyle(st.id);
+          applyStyle(st);
+          renderShop();
+        });
+        info.appendChild(btn);
+      } else {
+        const p = st.progress(s);
+        const req = document.createElement('div');
+        req.className = 'style-req';
+        req.innerHTML = `
+          <span class="style-req-label">${p.cur} / ${p.goal} ${p.label}</span>
+          <span class="style-progress"><i style="width:${Math.round((p.cur / p.goal) * 100)}%"></i></span>
+        `;
+        info.appendChild(req);
+      }
+      item.appendChild(info);
+      els.stylesList.appendChild(item);
+    }
+
+    startShopLoop();
+  }
+
+  function startShopLoop() {
+    if (shopLoopOn) return;
+    shopLoopOn = true;
+    const loop = (ts) => {
+      if (!document.querySelector('#view-styles.active')) {
+        shopLoopOn = false;
+        return; // stop when the shop isn't on screen
+      }
+      const t = ts / 1000;
+      for (const c of shopCanvases) {
+        const ctx = c.canvas.getContext('2d');
+        ctx.setTransform(c.dpr, 0, 0, c.dpr, 0, 0);
+        window.RRPedestal.drawPedestal(ctx, 210, c.style.palette, t, c.locked, c.style.accent, c.style.btn);
+      }
+      requestAnimationFrame(loop);
+    };
+    requestAnimationFrame(loop);
+  }
+
+  /* ==========================================================
      TABS — voxel disintegration transition
      ========================================================== */
   async function switchTab(name) {
@@ -201,6 +342,7 @@
 
     els.app.scrollTo({ top: 0 });
     transitioning = false;
+    if (name === 'styles') startShopLoop();
   }
 
   function openMenu() {
@@ -242,6 +384,12 @@
     window.RRStorage.current = save;
     updateStats();
     renderInventory();
+    renderShop();
+
+    // equip the saved button style + backfill achievements earned before
+    // the styles system existed (quietly)
+    syncUnlocks(true);
+    applyStyle(getStyle(save.activeStyle));
 
     // resting stage: your best find, or a quiet invitation
     const best = save.bestId ? getRarity(save.bestId) : null;
