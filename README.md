@@ -20,47 +20,29 @@ Play the [GitHub Pages build](https://ardy03851-bit.github.io/rarity-roller/).
 ## Project structure
 
 ```
-index.html            the whole game UI (one HTML file)
+index.html              the whole game UI (one HTML file)
 css/
-  base.css            design tokens + reset
-  fonts.css           font registry (30+ families via Google Fonts)
-  rarity.css          rarity visual system: gradient text, ticker, keyframes
-  ui.css              layout: stage, roll button, tabs, inventory, changelog
+  base.css              design tokens + reset
+  fonts.css             font registry (30+ families via Google Fonts)
+  rarity.css             rarity visual system: gradients, ticker, cards, hover effects
+  ui.css                 layout: stage, roll button, tabs, inventory, changelog
 js/
-  engine.js           RarityFX effects engine (particles, sound, DOM builders)
-  rarities.js         rarity definitions + weighted RNG
-  storage.js         durable save system (localStorage + IndexedDB mirror)
-  changelog.js        changelog data + rarity-aware text renderer
-  app.js              game loop, ticker, tabs, inventory
-assets/patterns/     SVG textures available to rarity image layers
+  engine.js             RarityFX effects engine (morphing icons, voxel transitions,
+                        particles, sound, DOM builders)
+  rarities.config.js    THE rarity config — the only file you edit to add rarities
+  rarities.js            resolves the config + weighted RNG
+  storage.js             durable save system (localStorage + IndexedDB mirror)
+  changelog.js           changelog data + rarity-aware text renderer
+  app.js                 game loop, ticker, tabs, inventory
+assets/patterns/       SVG textures available to rarity image layers
+RARITIES-GUIDE.md      the full rarity manual (every field, every option)
 ```
 
 ## Adding a rarity
 
-Open `js/rarities.js` and append to `RARITIES`:
+All rarity configuration lives in **one file**: [`js/rarities.config.js`](js/rarities.config.js). To add a rarity, paste the template block (included at the bottom of that file) into the list, edit the values, save, reload — no other file needs to change. Every field (weights, tiers, gradient colors, per-rarity fonts, morphing shape icons, card shapes, hover effects, image layers) is documented inline and in the full manual: [`RARITIES-GUIDE.md`](RARITIES-GUIDE.md).
 
-```js
-{
-  id: 'mythic2',
-  name: 'Mythic2',
-  weight: 400,          // tickets out of 100,000
-  tier: 7,              // 1-9, scales reveal effects
-  colors: ['#f472b6', '#e11d48', '#fda4af'],
-  glow: 'rgba(244,114,182,0.6)',
-  font: 'Grenze Gotisch',  // any family from the Google Fonts link in index.html
-  icon: 'hexagon',         // circle|square|triangle|diamond|pentagon|hexagon|ring|star4|star5|star6|star8|burst
-  speed: 0.9,            // gradient animation speed (lower = slower/grander)
-  images: {               // optional image slots
-    art:  'assets/patterns/stars.svg', // card texture
-    card: 'url',   // full card background
-    page: 'url',   // page ambient backdrop
-    text: 'url',   // gradient text fill
-    icon: 'url',   // replaces the shape icon
-  },
-}
-```
-
-To use a new font, add the family to the Google Fonts `<link>` in `index.html` first.
+The 12 shipped rarities: Common, Uncommon, Rare, Epic, Ancient, Legendary, Fabled, Mythic, Exotic, Radiant, Celestial, Divine.
 
 ## Changelog format
 

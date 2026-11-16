@@ -105,14 +105,14 @@
   to { opacity: 1; transform: none; }
 }
 
-/* ---------- inventory rows ---------- */
-.inv-row .rar-text {
+/* ---------- inventory cards ---------- */
+.inv-card .inv-name .rar-text {
   font-size: var(--text-lg);
   letter-spacing: 0.03em;
   text-transform: uppercase;
 }
 
-.inv-row.undiscovered .inv-name {
+.inv-card.undiscovered .inv-name {
   color: var(--color-text-faint);
   font-family: var(--fx-font, var(--font-body));
   font-size: var(--text-lg);
@@ -147,12 +147,256 @@
   to { filter: hue-rotate(360deg); }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .rar-text,
-  .stage-name .tick,
-  .stage-name .tick.landed,
-  .stage-meta,
-  .roll-btn .ring-pulse {
-    animation: none !important;
-  }
+/* morphing stage icon */
+.stage-icon-morph {
+  display: flex;
+  align-items: center;
+  color: var(--stage-c, var(--color-text-faint));
+}
+
+.stage-icon-morph svg {
+  filter: drop-shadow(0 0 6px var(--stage-c, transparent));
+  transition: filter 200ms ease-out;
+}
+
+/* ============================================================
+   INVENTORY CARDS — shape + per-rarity hover effects
+   The card shape comes from rarity.shape; the hover effect from
+   rarity.hover. `.fx-on` is applied on hover (mouse) and press
+   (finger) by the engine, so touch devices get it too.
+   ============================================================ */
+
+/* ---------- shapes ---------- */
+.shape-soft { border-radius: 16px; }
+.shape-sharp { border-radius: 2px; }
+.shape-pill { border-radius: 999px; }
+.shape-cut {
+  border-radius: 0;
+  clip-path: polygon(
+    14px 0, calc(100% - 14px) 0, 100% 14px, 100% calc(100% - 14px),
+    calc(100% - 14px) 100%, 14px 100%, 0 calc(100% - 14px), 0 14px
+  );
+}
+.shape-hex {
+  border-radius: 0;
+  clip-path: polygon(26% 0, 74% 0, 100% 50%, 74% 100%, 26% 100%, 0 50%);
+}
+.shape-round {
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+}
+
+/* ---------- base card ---------- */
+.inv-card {
+  position: relative;
+  overflow: hidden;
+  padding: var(--space-5);
+  min-height: 118px;
+  display: flex;
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  transition: transform 280ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 280ms ease-out, background 280ms ease-out;
+  contain: paint;
+}
+
+.inv-card > .rc-icon {
+  color: var(--r2, var(--color-text-faint));
+  margin-bottom: auto;
+  filter: drop-shadow(0 0 5px var(--rglow, transparent));
+}
+
+.inv-card.undiscovered .rc-icon { visibility: hidden; }
+
+.inv-art {
+  position: absolute;
+  inset: 0;
+  background-repeat: repeat;
+  background-size: 240px;
+  opacity: 0.12;
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+
+.inv-foot {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.inv-odds {
+  font-size: var(--text-xs);
+  color: var(--color-text-faint);
+  letter-spacing: 0.05em;
+}
+
+.inv-count {
+  margin-left: auto;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.inv-new {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-4);
+  font-size: var(--text-xs);
+  color: var(--r2, #fff);
+  letter-spacing: 0.16em;
+  font-weight: 600;
+}
+
+.inv-card.undiscovered { opacity: 0.45; }
+.inv-card.undiscovered .inv-name { color: var(--color-text-faint); }
+
+/* ============================================================
+   HOVER EFFECTS — one subtle signature move per rarity
+   ============================================================ */
+
+/* lift — the default: a quiet rise + tinted edge */
+.hover-lift.fx-on {
+  transform: translateY(-3px);
+  border-color: rgba(var(--r2-rgb), 0.35);
+}
+
+/* glow — a soft halo grows from the card */
+.hover-glow.fx-on {
+  transform: translateY(-2px);
+  box-shadow: 0 0 30px -8px var(--rglow, transparent);
+  border-color: rgba(var(--r2-rgb), 0.30);
+}
+
+/* underline — a gradient rule slides in under the name */
+.hover-underline::after {
+  content: '';
+  position: absolute;
+  left: var(--space-5);
+  right: var(--space-5);
+  bottom: calc(var(--space-4) + 26px);
+  height: 1px;
+  background: linear-gradient(90deg, var(--r1), var(--r2), var(--r3));
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 320ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.hover-underline.fx-on::after { transform: scaleX(1); }
+.hover-underline.fx-on { border-color: rgba(var(--r2-rgb), 0.25); }
+
+/* tilt — a gentle 3D lean toward the finger */
+.hover-tilt.fx-on {
+  transform: perspective(560px) rotateX(7deg) translateY(-2px);
+  border-color: rgba(var(--r2-rgb), 0.30);
+}
+
+/* sheen — one slow sweep of light across the card */
+.fx-sheen {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.07) 50%, transparent 60%);
+  background-size: 260% 100%;
+  opacity: 0;
+}
+.hover-sheen.fx-on .fx-sheen {
+  opacity: 1;
+  animation: card-sheen 900ms ease-out;
+}
+@keyframes card-sheen {
+  from { background-position: 140% 0; }
+  to { background-position: -140% 0; }
+}
+
+/* pulse — a breathing glow */
+.hover-pulse.fx-on {
+  animation: card-pulse 1.3s ease-in-out infinite;
+  border-color: rgba(var(--r2-rgb), 0.35);
+}
+@keyframes card-pulse {
+  0%, 100% { box-shadow: 0 0 0 -2px var(--rglow, transparent); }
+  50% { box-shadow: 0 0 34px -6px var(--rglow, transparent); }
+}
+
+/* scan — a thin scanline travels down the card */
+.fx-scan {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(var(--r2-rgb), 0.12) 48%,
+    rgba(var(--r2-rgb), 0.22) 50%,
+    rgba(var(--r2-rgb), 0.12) 52%,
+    transparent 100%
+  );
+  background-size: 100% 220%;
+}
+.hover-scan.fx-on .fx-scan {
+  opacity: 1;
+  animation: card-scan 1.5s linear infinite;
+}
+@keyframes card-scan {
+  from { background-position: 0 -110%; }
+  to { background-position: 0 110%; }
+}
+
+/* twinkle — three tiny stars fade in and out */
+.fx-twinkle {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.fx-twinkle i {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--r2, #fff);
+  opacity: 0;
+}
+.fx-twinkle i:nth-child(1) { top: 22%; right: 26%; }
+.fx-twinkle i:nth-child(2) { top: 55%; right: 14%; animation-delay: 0.4s; }
+.fx-twinkle i:nth-child(3) { top: 34%; right: 44%; animation-delay: 0.8s; }
+.hover-twinkle.fx-on .fx-twinkle i { animation: twinkle 1.2s ease-in-out infinite; }
+@keyframes twinkle {
+  0%, 100% { opacity: 0; transform: scale(0.6); }
+  50% { opacity: 0.9; transform: scale(1.2); }
+}
+
+/* dust — pixels drift slowly upward */
+.fx-dust {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.fx-dust i {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  background: var(--r2, #fff);
+  opacity: 0;
+}
+.fx-dust i:nth-child(1) { left: 20%; bottom: 26%; }
+.fx-dust i:nth-child(2) { left: 55%; bottom: 20%; animation-delay: 0.5s; }
+.fx-dust i:nth-child(3) { left: 38%; bottom: 34%; animation-delay: 1s; }
+.fx-dust i:nth-child(4) { left: 72%; bottom: 28%; animation-delay: 1.5s; }
+.hover-dust.fx-on .fx-dust i { animation: dust-rise 1.9s ease-in infinite; }
+@keyframes dust-rise {
+  0% { opacity: 0; transform: translateY(0); }
+  25% { opacity: 0.7; }
+  100% { opacity: 0; transform: translateY(-34px); }
+}
+
+/* hue — the card's colors slowly cycle the spectrum */
+.hover-hue.fx-on .rar-text,
+.hover-hue.fx-on .rc-icon {
+  animation: hue-cycle 3.2s linear infinite;
+}
+.hover-hue.fx-on {
+  border-color: rgba(var(--r2-rgb), 0.40);
 }

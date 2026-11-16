@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.2.0 — 2026-11-16 — Voxel update
+
+- Switching tabs now breaks the screen into 3D pixels: every pixel of the current view lifts off, tumbles through space and re-settles as a pixel of the next view. Slow on purpose, and best experienced with sound on.
+- All animations now run even with the system Reduce Motion setting enabled — the effects are the game, so they were tuned gentle instead of disabled.
+- The inventory returned as a grid of cards, and every rarity now has its own subtle hover effect: Legendary sweeps a sheen, Exotic runs a scanline, Celestial twinkles, Ancient breathes rising dust, and more. Cards also have per-rarity shapes — hexagons, chamfered cuts, pills.
+- Rarity configuration moved into its own file (js/rarities.config.js). Adding a rarity is now just pasting a block into that file — no other edits needed. See RARITIES-GUIDE.md in the repository for the full manual.
+- Three new rarities joined the pool: Ancient, Fabled and Radiant — pushing the pool to twelve.
+- The icon above the name now morphs between shapes as the ticker runs — circle to diamond to star, with the color melting between them.
+
 ## 1.1.0 — 2026-11-16 — Redesign
 
 - The whole interface was stripped back to one idea: **the name is the game**. The reel window, chips, result cards, stat panels, ambient blobs and arcade effects are gone — the screen is now a huge rarity name, a thin roll button, and quiet type everywhere else.

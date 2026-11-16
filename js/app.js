@@ -1,7 +1,6 @@
 /* ============================================================
-   APP — v2: the stage name is the game.
-   Roll runs a decelerating ticker of rarity names; the last
-   one lands as the huge gradient headline.
+   APP — v1.2: morphing stage icon, voxel tab transitions,
+   card inventory with per-rarity hover effects.
    ============================================================ */
 (() => {
   'use strict';
@@ -18,8 +17,7 @@
     rollBtn: $('#roll-btn'),
     statTotal: $('#stat-total'),
     statBest: $('#stat-best'),
-    statBestWrap: $('#stat-best-wrap'),
-    invList: $('#inv-list'),
+    invGrid: $('#inv-grid'),
     tabsToggle: $('#tabs-toggle'),
     tabsMenu: $('#tabs-menu'),
     soundToggle: $('#sound-toggle'),
@@ -29,6 +27,8 @@
   const easeOutQuad = (t) => 1 - (1 - t) * (1 - t);
 
   let spinning = false;
+  let transitioning = false;
+  let stageIconEl = null;
 
   /* ==========================================================
      AUDIO UNLOCK (first gesture, iPad Safari requirement)
@@ -44,9 +44,13 @@
   /* ==========================================================
      STAGE
      ========================================================== */
-  function setIcon(rarity) {
-    els.stageIcon.innerHTML = FX.iconSVG(rarity.icon, 30);
-    els.stageIcon.style.setProperty('--stage-c', rarity.colors[1] || rarity.colors[0]);
+  function initStageIcon(rarity) {
+    stageIconEl = FX.stageIcon(rarity);
+    els.stageIcon.replaceChildren(stageIconEl);
+  }
+
+  function morphIcon(rarity) {
+    if (stageIconEl) stageIconEl.morphTo(rarity);
   }
 
   function setMeta(text, isNew) {
@@ -63,10 +67,6 @@
       s.textContent = text;
       els.stageMeta.appendChild(s);
     }
-  }
-
-  function metaFor(rarity, count) {
-    return `1 in ${Math.round(TOTAL_WEIGHT / rarity.weight)} · owned ${count}`;
   }
 
   /* ==========================================================
@@ -89,18 +89,12 @@
     const target = rollRarity();
     const seq = buildSequence(target);
 
-    if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      land(target);
-      return;
-    }
-
     const TICKS = seq.length;
-    const totalTime = 2700;
     for (let i = 0; i < TICKS; i++) {
       const r = seq[i];
       els.stageName.replaceChildren(FX.tick(r));
-      setIcon(r);
-      // quiet tick, skipping the very fastest beats so it never machine-guns
+      morphIcon(r);
+      // quiet tick, skipping the fastest beats so it never machine-guns
       if (i < TICKS - 1 && i % 2 === 0) FX.sound.tick();
       const k = i / (TICKS - 1);            // 0 → 1
       const speed = easeOutQuad(k);          // 0 → 1, decelerating
@@ -117,6 +111,7 @@
 
     // landed name
     els.stageName.replaceChildren(FX.landed(rarity));
+    morphIcon(rarity);
     els.rollBtn.classList.remove('spinning');
     els.rollBtn.disabled = false;
 
@@ -127,8 +122,10 @@
     els.rollBtn.appendChild(pulse);
     setTimeout(() => pulse.remove(), 800);
 
-    setIcon(rarity);
-    setMeta(metaFor(rarity, window.RRStorage.current.counts[rarity.id]), isNew);
+    setMeta(
+      `1 in ${Math.round(TOTAL_WEIGHT / rarity.weight).toLocaleString()} · owned ${window.RRStorage.current.counts[rarity.id]}`,
+      isNew
+    );
 
     const rect = els.stageName.getBoundingClientRect();
     FX.playReveal(rarity, els.stageName, {
@@ -159,7 +156,7 @@
   }
 
   /* ==========================================================
-     INVENTORY
+     INVENTORY — card grid with per-rarity hover effects
      ========================================================== */
   function renderInventory() {
     const s = window.RRStorage.current;
@@ -169,28 +166,41 @@
       const count = s.counts[r.id] || 0;
       const discovered = count > 0;
       const isNew = discovered && !s.seen.includes(r.id);
-      frag.appendChild(FX.buildRow(r, { count, discovered, isNew }));
+      frag.appendChild(FX.buildCard(r, { count, discovered, isNew }));
       if (isNew) window.RRStorage.markSeen(r.id);
     });
 
-    els.invList.replaceChildren(frag);
+    els.invGrid.replaceChildren(frag);
   }
 
   /* ==========================================================
-     TABS
+     TABS — voxel disintegration transition
      ========================================================== */
-  function switchTab(name) {
-    $$('.view').forEach((v) => v.classList.remove('active'));
-    const view = $(`#view-${name}`);
-    if (view) view.classList.add('active');
+  async function switchTab(name) {
+    const from = $('.view.active');
+    const to = $(`#view-${name}`);
+    if (!to || to === from) { closeMenu(); return; }
+    if (transitioning) { closeMenu(); return; }
+    transitioning = true;
 
+    // update tab highlight + aria immediately
     $$('.tab-btn').forEach((b) => {
       if (b.dataset.tab === name) b.setAttribute('aria-current', 'page');
       else b.removeAttribute('aria-current');
     });
-
     closeMenu();
+
+    // the screen breaks into 3D pixels and rebuilds as the new view
+    const ok = await FX.voxelTransition(from, to);
+
+    if (!ok) {
+      // graceful fallback: plain swap
+      from.classList.remove('active');
+      to.classList.add('active');
+    }
+
     els.app.scrollTo({ top: 0 });
+    transitioning = false;
   }
 
   function openMenu() {
@@ -236,12 +246,12 @@
     const best = save.bestId ? getRarity(save.bestId) : null;
     if (best && save.totalRolls > 0) {
       els.stageName.replaceChildren(FX.landed(best));
-      setIcon(best);
+      initStageIcon(best);
       setMeta(`best of ${save.totalRolls} roll${save.totalRolls === 1 ? '' : 's'}`);
     } else {
       const first = getRarity('common');
       els.stageName.replaceChildren(FX.tick(first));
-      setIcon(first);
+      initStageIcon(first);
       setMeta('press roll');
     }
   })();

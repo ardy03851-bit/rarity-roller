@@ -56,7 +56,7 @@
         <h2>Inventory</h2>
         <p class="view-sub">Your collection is saved on this device.</p>
       </div>
-      <ul id="inv-list" class="inv-list" role="list"></ul>
+      <div id="inv-grid" class="inv-grid"></div>
     </section>
 
     <!-- ============ CHANGELOG ============ -->
@@ -80,7 +80,10 @@
     <button class="tab-btn" data-tab="changelog">Changelog</button>
   </nav>
 
+  <!-- html2canvas for the voxel tab transition (vendored copy, CDN fallback) -->
+  <script src="js/vendor/html2canvas.min.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js'"></script>
   <script src="js/engine.js"></script>
+  <script src="js/rarities.config.js"></script>
   <script src="js/rarities.js"></script>
   <script src="js/storage.js"></script>
   <script src="js/changelog.js"></script>

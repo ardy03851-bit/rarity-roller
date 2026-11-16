@@ -1,26 +1,28 @@
 /* ============================================================
-   RarityFX — rarity effects engine (v2: restrained, editorial)
+   RarityFX — rarity effects engine (v1.2)
    ------------------------------------------------------------
    Public API (window.RarityFX):
      Particles (canvas)
-       .burst(x, y, opts)        radial burst (types: spark, orb,
-                                 star, confetti, ember, ring, ray, glyph)
-       .clear()
+       .burst(x, y, opts) / .ringBurst(x, y, opts) / .clear()
      Screen effects
        .flash(color, duration, strength)
+     Morphing shape icons
+       .iconSVG(shape, size)     static path-based SVG
+       .stageIcon(rarity)        <svg> element that morphs between
+                                 shapes and colors via .morphTo(rarity)
      DOM builders
-       .vars(el, rarity)          apply rarity CSS variables
-       .textSpan(rarity, text)    animated gradient text span
-       .tick(rarity, label)       one stage-name tick (spinner step)
-       .landed(rarity)            the final landed name element
-       .buildRow(rarity, opts)    inventory row
-       .iconSVG(shape, size)     basic-shape SVG icon
+       .vars(el, rarity) / .textSpan(rarity, text)
+       .tick(rarity) / .landed(rarity)      stage ticker elements
+       .buildCard(rarity, opts)             inventory card (shape + hover)
+       .attachHover(card, rarity)           enables the hover/press effect
        .center(el)
+     Tab transition
+       .voxelTransition(fromView, toView)  3D pixel disintegration
      Orchestration
-       .playReveal(rarity, el)    tier-scaled, restrained reveal
+       .playReveal(rarity, el, opts)
        .register(name, fn) / .run(name, ctx)
      Sound (procedural WebAudio, quiet)
-       .sound.tick() / .reveal(tier) / .toggle() / .muted / .unlock()
+       .sound.tick() / .reveal(tier) / .transition() / .toggle()
    ============================================================ */
 (() => {
   'use strict';
@@ -30,7 +32,6 @@
   const rand = (a, b) => a + Math.random() * (b - a);
   const pick = (arr) => arr[(Math.random() * arr.length) | 0];
   const TAU = Math.PI * 2;
-  const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   /* ==========================================================
      PARTICLE SYSTEM (canvas)
@@ -164,7 +165,7 @@
 
   FX.burst = (x, y, opts = {}) => {
     const maker = makers[opts.type ?? 'spark'];
-    if (!maker || REDUCED) return;
+    if (!maker) return;
     const colors = opts.colors || ['#7dd3fc'];
     const count = opts.count ?? 12;
     for (let i = 0; i < count; i++) {
@@ -182,7 +183,6 @@
   };
 
   FX.ringBurst = (x, y, opts = {}) => {
-    if (REDUCED) return;
     const colors = opts.colors || ['#7dd3fc'];
     for (let i = 0; i < (opts.count ?? 1); i++) {
       setTimeout(() => {
@@ -195,7 +195,7 @@
   FX.clear = () => { particles = []; };
 
   /* ==========================================================
-     SOUND — quiet, warm, procedural. No arcade fanfares.
+     SOUND — quiet, warm, procedural.
      ========================================================== */
   const sound = (() => {
     let ac = null;
@@ -233,7 +233,28 @@
       o.stop(t0 + dur + 0.05);
     }
 
-    /* warm, slow-attack pad notes */
+    function noise({ dur = 0.5, vol = 0.05, from = 120, to = 900, delay = 0, attack = 0.1 } = {}) {
+      if (muted || !ensure()) return;
+      const t0 = ac.currentTime + delay;
+      const len = Math.floor(ac.sampleRate * dur);
+      const buf = ac.createBuffer(1, len, ac.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+      const src = ac.createBufferSource();
+      src.buffer = buf;
+      const lp = ac.createBiquadFilter();
+      lp.type = 'lowpass';
+      lp.frequency.setValueAtTime(from, t0);
+      lp.frequency.exponentialRampToValueAtTime(to, t0 + dur);
+      const g = ac.createGain();
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.linearRampToValueAtTime(vol, t0 + attack);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      src.connect(lp).connect(g).connect(master);
+      src.start(t0);
+      src.stop(t0 + dur);
+    }
+
     const CHORD = [220, 277.18, 329.63, 440, 554.37, 659.25];
 
     return {
@@ -253,6 +274,12 @@
           for (let i = 0; i < 3; i++) tone(CHORD[5] * 2, { type: 'sine', dur: 0.8, vol: 0.02, delay: 0.9 + i * 0.18, attack: 0.03 });
         }
       },
+      /* the voxel transition: a deep, slow exhale */
+      transition() {
+        noise({ dur: 1.7, vol: 0.07, from: 90, to: 700, attack: 0.35 });
+        tone(55, { type: 'sine', dur: 1.5, vol: 0.05, attack: 0.3 });
+        tone(110, { type: 'sine', dur: 1.2, vol: 0.03, delay: 0.25, attack: 0.2 });
+      },
     };
   })();
   FX.sound = sound;
@@ -261,7 +288,6 @@
      SCREEN EFFECTS
      ========================================================== */
   FX.flash = (color = 'rgba(255,255,255,1)', duration = 400, strength = 0.14) => {
-    if (REDUCED) return;
     const layer = $('#flash-layer');
     layer.style.background = color;
     layer.style.transition = 'none';
@@ -278,55 +304,181 @@
   };
 
   /* ==========================================================
-     BASIC-SHAPE SVG ICONS (pure geometry)
+     MORPHING SHAPE ICONS
+     Every shape is a polygon; every polygon is resampled to the
+     same number of points, so any shape can smoothly morph into
+     any other. The stage icon uses this; static cards embed the
+     same geometry as an SVG path.
      ========================================================== */
-  function poly(n, cx, cy, r, rot = -Math.PI / 2) {
+  const K = 24; // points per shape
+
+  function ngon(n, r, cx = 12, cy = 12) {
     const pts = [];
     for (let i = 0; i < n; i++) {
-      const a = rot + (i * TAU) / n;
-      pts.push(`${(cx + Math.cos(a) * r).toFixed(2)},${(cy + Math.sin(a) * r).toFixed(2)}`);
+      const a = -Math.PI / 2 + (i * TAU) / n;
+      pts.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r]);
     }
-    return pts.join(' ');
+    return pts;
   }
 
-  function starPoly(points, cx, cy, r, inner = 0.42) {
+  function starVerts(points, r1, r2, cx = 12, cy = 12) {
     const pts = [];
     for (let i = 0; i < points * 2; i++) {
       const a = -Math.PI / 2 + (i * TAU) / (points * 2);
-      const rr = i % 2 ? r * inner : r;
-      pts.push(`${(cx + Math.cos(a) * rr).toFixed(2)},${(cy + Math.sin(a) * rr).toFixed(2)}`);
+      const rr = i % 2 ? r2 : r1;
+      pts.push([cx + Math.cos(a) * rr, cy + Math.sin(a) * rr]);
     }
-    return pts.join(' ');
+    return pts;
   }
 
-  const SHAPES = {
-    circle: () => `<circle cx="12" cy="12" r="8.5" fill="currentColor"/>`,
-    square: () => `<rect x="4.5" y="4.5" width="15" height="15" rx="2.5" fill="currentColor"/>`,
-    triangle: () => `<polygon points="${poly(3, 12, 12.8, 8.5)}" fill="currentColor"/>`,
-    diamond: () => `<polygon points="${poly(4, 12, 12, 8.8)}" fill="currentColor"/>`,
-    pentagon: () => `<polygon points="${poly(5, 12, 12.4, 8.6)}" fill="currentColor"/>`,
-    hexagon: () => `<polygon points="${poly(6, 12, 12, 8.8)}" fill="currentColor"/>`,
-    star4: () => `<polygon points="${starPoly(4, 12, 12, 9.5, 0.32)}" fill="currentColor"/>`,
-    star5: () => `<polygon points="${starPoly(5, 12, 12.4, 9, 0.45)}" fill="currentColor"/>`,
-    star6: () => `<polygon points="${starPoly(6, 12, 12, 9.2, 0.5)}" fill="currentColor"/>`,
-    star8: () => `<polygon points="${starPoly(8, 12, 12, 9.4, 0.62)}" fill="currentColor"/>`,
-    ring: () => `<circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="3"/>`,
-    burst: () => `<polygon points="${starPoly(12, 12, 12, 9.6, 0.66)}" fill="currentColor"/>`,
+  const SHAPE_VERTS = {
+    circle: () => ngon(16, 9),
+    square: () => [[4, 4], [20, 4], [20, 20], [4, 20]],
+    triangle: () => [[12, 2.5], [21.5, 20], [2.5, 20]],
+    diamond: () => [[12, 2], [22, 12], [12, 22], [2, 12]],
+    pentagon: () => ngon(5, 9.6),
+    hexagon: () => ngon(6, 9.6),
+    octagon: () => ngon(8, 9.6),
+    star4: () => starVerts(4, 10, 3.2),
+    star5: () => starVerts(5, 10, 4.5),
+    star6: () => starVerts(6, 10, 5.2),
+    star8: () => starVerts(8, 10, 6.4),
+    burst: () => starVerts(12, 10, 6.8),
+    cross: () => [[8, 3], [16, 3], [16, 8], [21, 8], [21, 16], [16, 16], [16, 21], [8, 21], [8, 16], [3, 16], [3, 8], [8, 8]],
+    shield: () => [[4, 4.5], [20, 4.5], [20, 12.5], [12, 21.5], [4, 12.5]],
+    chevron: () => [[3.5, 7], [12, 3], [20.5, 7], [20.5, 12.5], [12, 8.5], [3.5, 12.5]],
+    crescent: () => [
+      [15.5, 3.5], [19.5, 8], [20.5, 12.5], [18.5, 17.5], [14, 21], [10, 21.5],
+      [14, 17.5], [16.5, 12.5], [15.5, 8], [12.5, 4.5],
+    ],
+    droplet: () => [[12, 1.5], [16.5, 7.5], [19.5, 12.5], [19, 16.5], [15.5, 20.5], [12, 22], [8.5, 20.5], [5, 16.5], [4.5, 12.5], [7.5, 7.5]],
   };
 
+  /* resample polygon perimeter to exactly K evenly spaced points */
+  function sampleShape(name) {
+    const verts = (SHAPE_VERTS[name] || SHAPE_VERTS.circle)();
+    const pts = [];
+    // closed perimeter segments
+    const segs = [];
+    let total = 0;
+    for (let i = 0; i < verts.length; i++) {
+      const a = verts[i];
+      const b = verts[(i + 1) % verts.length];
+      const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      segs.push({ a, b, len });
+      total += len;
+    }
+    let seg = 0;
+    let segPos = 0;
+    for (let i = 0; i < K; i++) {
+      const dist = (i / K) * total;
+      while (segPos + segs[seg].len < dist && seg < segs.length - 1) {
+        segPos += segs[seg].len;
+        seg++;
+      }
+      const { a, b, len } = segs[seg];
+      const t = len > 0 ? (dist - segPos) / len : 0;
+      pts.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]);
+    }
+    return pts;
+  }
+
+  const SHAPE_CACHE = {};
+  function shapePoints(name) {
+    if (!SHAPE_CACHE[name]) SHAPE_CACHE[name] = sampleShape(name);
+    return SHAPE_CACHE[name];
+  }
+
+  function pathFromPoints(pts) {
+    return 'M' + pts.map((p) => `${p[0].toFixed(2)} ${p[1].toFixed(2)}`).join('L') + 'Z';
+  }
+
   FX.iconSVG = (shape, size = 32) =>
-    `<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true" class="rc-icon">${
-      (SHAPES[shape] || SHAPES.circle)(size)
-    }</svg>`;
+    `<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true" class="rc-icon"><path d="${pathFromPoints(shapePoints(shape))}" fill="currentColor"/></svg>`;
+
+  FX.SHAPES = Object.keys(SHAPE_VERTS);
+
+  /* --- morphing stage icon element --- */
+  function hexToRgb(hex) {
+    const m = hex.replace('#', '');
+    const v = m.length === 3 ? m.split('').map((c) => c + c).join('') : m;
+    return [parseInt(v.slice(0, 2), 16), parseInt(v.slice(2, 4), 16), parseInt(v.slice(4, 6), 16)];
+  }
+
+  FX.stageIcon = (initialRarity) => {
+    const wrap = document.createElement('span');
+    wrap.className = 'stage-icon-morph';
+    wrap.innerHTML = `<svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true"><path fill="currentColor"/></svg>`;
+    const svg = wrap.firstElementChild;
+    const path = svg.firstElementChild;
+
+    let curPts = shapePoints(initialRarity.icon).map((p) => [...p]);
+    let curColor = hexToRgb(initialRarity.colors[1] || initialRarity.colors[0]);
+    let anim = null;
+
+    function render() {
+      path.setAttribute('d', pathFromPoints(curPts));
+      const [r, g, b] = curColor.map((v) => Math.round(v));
+      svg.style.color = `rgb(${r},${g},${b})`;
+      wrap.style.setProperty('--stage-c', `rgb(${r},${g},${b})`);
+    }
+    render();
+
+    wrap.morphTo = (rarity, duration = 110) => {
+      const fromPts = curPts.map((p) => [...p]);
+      const toPts = shapePoints(rarity.icon);
+      const fromColor = [...curColor];
+      const toColor = hexToRgb(rarity.colors[1] || rarity.colors[0]);
+      const t0 = performance.now();
+      if (anim) cancelAnimationFrame(anim);
+      const frame = (t) => {
+        const k = Math.min(1, (t - t0) / duration);
+        const e = 1 - Math.pow(1 - k, 3); // easeOutCubic
+        for (let i = 0; i < K; i++) {
+          curPts[i][0] = fromPts[i][0] + (toPts[i][0] - fromPts[i][0]) * e;
+          curPts[i][1] = fromPts[i][1] + (toPts[i][1] - fromPts[i][1]) * e;
+        }
+        for (let c = 0; c < 3; c++) {
+          curColor[c] = fromColor[c] + (toColor[c] - fromColor[c]) * e;
+        }
+        render();
+        if (k < 1) anim = requestAnimationFrame(frame);
+        else anim = null;
+      };
+      anim = requestAnimationFrame(frame);
+    };
+
+    return wrap;
+  };
 
   /* ==========================================================
      DOM BUILDERS
      ========================================================== */
+  /* hex/#rrggbb or rgb() string -> "r,g,b" for use with rgba(var(--x), a) */
+  const toRGB = (c) => {
+    if (!c) return '255,255,255';
+    let m = /^#([0-9a-f]{6})$/i.exec(c);
+    if (m) {
+      const n = parseInt(m[1], 16);
+      return `${(n >> 16) & 255},${(n >> 8) & 255},${n & 255}`;
+    }
+    m = /^#([0-9a-f])([0-9a-f])([0-9a-f])$/i.exec(c);
+    if (m) {
+      return m.slice(1).map(h => parseInt(h + h, 16)).join(',');
+    }
+    m = /rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/.exec(c);
+    if (m) return `${m[1]},${m[2]},${m[3]}`;
+    return '255,255,255';
+  };
+
   FX.vars = (el, rarity) => {
     const s = el.style;
     s.setProperty('--r1', rarity.colors[0]);
     s.setProperty('--r2', rarity.colors[1] || rarity.colors[0]);
     s.setProperty('--r3', rarity.colors[2] || rarity.colors[1] || rarity.colors[0]);
+    s.setProperty('--r1-rgb', toRGB(rarity.colors[0]));
+    s.setProperty('--r2-rgb', toRGB(rarity.colors[1] || rarity.colors[0]));
+    s.setProperty('--r3-rgb', toRGB(rarity.colors[2] || rarity.colors[1] || rarity.colors[0]));
     s.setProperty('--rglow', rarity.glow);
     s.setProperty('--fx-font', rarity.font ? `"${rarity.font}", var(--font-body)` : 'var(--font-body)');
     if (rarity.speed) s.setProperty('--fx-speed', rarity.speed);
@@ -343,8 +495,6 @@
     return span;
   };
 
-  /* one spinner tick: a fresh name element (so the tick-in
-     animation replays) carrying the rarity's gradient + font */
   FX.tick = (rarity, label) => {
     const el = document.createElement('span');
     el.className = 'tick';
@@ -359,31 +509,251 @@
     return el;
   };
 
-  /* inventory row */
-  FX.buildRow = (rarity, { count, discovered = true, isNew = false } = {}) => {
-    const li = document.createElement('li');
-    li.className = `inv-row t${rarity.tier}` + (discovered ? '' : ' undiscovered');
-    FX.vars(li, rarity);
+  /* --- inventory card --- */
+  FX.buildCard = (rarity, { count, discovered = true, isNew = false } = {}) => {
+    const odds = `1 in ${Math.round((typeof TOTAL_WEIGHT !== 'undefined' ? TOTAL_WEIGHT : 100000) / rarity.weight).toLocaleString()}`;
+    const card = document.createElement('article');
+    card.className = `inv-card shape-${rarity.shape} hover-${rarity.hover} t${rarity.tier}` +
+      (discovered ? '' : ' undiscovered');
+    FX.vars(card, rarity);
 
-    const name = document.createElement('span');
-    name.className = 'inv-name';
+    const nameEl = document.createElement('h3');
+    nameEl.className = 'inv-name';
     if (discovered) {
-      const t = FX.textSpan(rarity, rarity.name);
-      t.classList.add('rar-text');
-      name.appendChild(t);
+      nameEl.appendChild(FX.textSpan(rarity, rarity.name));
     } else {
-      name.textContent = rarity.name;
+      nameEl.textContent = rarity.name;
     }
 
-    li.innerHTML = `${FX.iconSVG(rarity.icon, 16)}
-      <span class="inv-main"></span>
-      <span class="inv-odds">${discovered ? `1 in ${Math.round(TOTAL_WEIGHT / rarity.weight)}` : ''}</span>
+    card.innerHTML = `
+      ${FX.iconSVG(rarity.icon, 22)}
+      <span class="inv-art"></span>
+      <span class="fx-sheen"></span>
+      <span class="fx-scan"></span>
+      <span class="fx-twinkle"><i></i><i></i><i></i></span>
+      <span class="fx-dust"><i></i><i></i><i></i><i></i></span>
       ${isNew && discovered ? '<span class="inv-new">New</span>' : ''}
-      <span class="inv-count">${discovered ? count : '—'}</span>`;
+      <div class="inv-body"></div>
+      <div class="inv-foot">
+        <span class="inv-odds">${discovered ? odds : ''}</span>
+        <span class="inv-count">${discovered ? count : '—'}</span>
+      </div>
+    `;
+    card.querySelector('.inv-body').appendChild(nameEl);
 
-    // name goes inside .inv-main (kept separate for layout)
-    li.querySelector('.inv-main').appendChild(name);
-    return li;
+    // image layer (optional)
+    if (rarity.images && rarity.images.art) {
+      card.querySelector('.inv-art').style.backgroundImage = `url(${rarity.images.art})`;
+    }
+
+    FX.attachHover(card, rarity);
+    return card;
+  };
+
+  /* subtle per-rarity hover/press effect — works for mouse and finger */
+  FX.attachHover = (card, rarity) => {
+    const on = () => card.classList.add('fx-on');
+    const off = () => card.classList.remove('fx-on');
+    card.addEventListener('pointerenter', on);
+    card.addEventListener('pointerleave', off);
+    card.addEventListener('pointerdown', on);
+    card.addEventListener('pointerup', off);
+    card.addEventListener('pointercancel', off);
+  };
+
+  /* ==========================================================
+     VOXEL TAB TRANSITION
+     The current view is snapshot, broken into a grid of 3D
+     pixels, each one lifts off the screen, tumbles through
+     space and re-settles as a pixel of the next view.
+     ========================================================== */
+  const Voxel = (() => {
+    let libPromise = null;
+    const COLS = 56;
+
+    function loadLib() {
+      if (libPromise) return libPromise;
+      libPromise = new Promise((resolve) => {
+        if (window.html2canvas) return resolve(window.html2canvas);
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+        s.onload = () => resolve(window.html2canvas || null);
+        s.onerror = () => resolve(null);
+        document.head.appendChild(s);
+      });
+      return libPromise;
+    }
+
+    async function capture(el) {
+      const lib = await loadLib();
+      if (!lib) return null;
+      try {
+        return await lib(el, { backgroundColor: '#0b0b0d', logging: false, scale: 1, useCORS: true });
+      } catch { return null; }
+    }
+
+    function gridFrom(snap, cols, rows) {
+      const tiny = document.createElement('canvas');
+      tiny.width = cols;
+      tiny.height = rows;
+      const tctx = tiny.getContext('2d', { willReadFrequently: true });
+      tctx.drawImage(snap, 0, 0, cols, rows);
+      const data = tctx.getImageData(0, 0, cols, rows).data;
+      const cells = [];
+      for (let i = 0; i < cols * rows; i++) {
+        cells.push({
+          r: data[i * 4],
+          g: data[i * 4 + 1],
+          b: data[i * 4 + 2],
+          a: data[i * 4 + 3] / 255,
+        });
+      }
+      return cells;
+    }
+
+    const easeInOut = (t) => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+
+    async function animate(voxCanvas, snapA, snapB, rect, onDone) {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      voxCanvas.width = Math.floor(rect.width * dpr);
+      voxCanvas.height = Math.floor(rect.height * dpr);
+      voxCanvas.style.left = `${rect.left}px`;
+      voxCanvas.style.top = `${rect.top}px`;
+      voxCanvas.style.width = `${rect.width}px`;
+      voxCanvas.style.height = `${rect.height}px`;
+      const vctx = voxCanvas.getContext('2d');
+      vctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      const cols = COLS;
+      const rows = Math.max(8, Math.round(cols * rect.height / rect.width));
+      const cw = rect.width / cols;
+      const ch = rect.height / rows;
+
+      const gA = gridFrom(snapA, cols, rows);
+      const gB = gridFrom(snapB, cols, rows);
+
+      /* build voxel list — skip cells that are background in BOTH views */
+      const voxels = [];
+      for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+          const i = y * cols + x;
+          const a = gA[i], b = gB[i];
+          if (a.a < 0.05 && b.a < 0.05) continue;
+          const dx = x / cols - 0.5;
+          const dy = y / rows - 0.5;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          voxels.push({
+            ax: x * cw + cw / 2, ay: y * ch + ch / 2,
+            bx: x * cw + cw / 2, by: y * ch + ch / 2,
+            ca: a, cb: b,
+            delay: dist * 620 * rand(0.7, 1.3) + rand(0, 90),
+            flight: rand(650, 950),
+            zAmp: rand(50, 210),
+            ox: rand(-42, 42),
+            oy: rand(-30, 30),
+            rot: rand(-1, 1) * Math.PI * rand(0.6, 1.5),
+          });
+        }
+      }
+
+      const DURATION = 1950;
+      const t0 = performance.now();
+
+      function frame(t) {
+        const el = t - t0;
+        vctx.clearRect(0, 0, rect.width, rect.height);
+
+        if (el >= DURATION) {
+          // final frame: the new screen, pixel-perfect
+          vctx.drawImage(snapB, 0, 0, rect.width, rect.height);
+          onDone();
+          return;
+        }
+
+        for (const v of voxels) {
+          const local = (el - v.delay) / v.flight;
+          if (local <= 0) {
+            // not yet lifted: show as part of the old screen
+            vctx.fillStyle = `rgb(${v.ca.r},${v.ca.g},${v.ca.b})`;
+            vctx.globalAlpha = v.ca.a;
+            vctx.fillRect(v.ax - cw / 2, v.ay - ch / 2, cw + 0.5, ch + 0.5);
+            continue;
+          }
+          const p = easeInOut(Math.min(1, local));
+          const arc = Math.sin(p * Math.PI);
+          const x = v.ax + (v.bx - v.ax) * p + arc * v.ox;
+          const y = v.ay + (v.by - v.ay) * p + arc * v.oy;
+          const z = arc * v.zAmp;
+          const scale = 1 + z / 460;
+          const size = Math.max(cw, ch) * scale * 1.06;
+
+          const cA = v.ca, cB = v.cb;
+          const r = Math.round(cA.r + (cB.r - cA.r) * p);
+          const g = Math.round(cA.g + (cB.g - cA.g) * p);
+          const b = Math.round(cA.b + (cB.b - cA.b) * p);
+          const alpha = (cA.a + (cB.a - cA.a) * p) * (0.55 + 0.45 * scale);
+
+          vctx.save();
+          vctx.translate(x, y);
+          vctx.rotate(v.rot * arc);
+          vctx.globalAlpha = alpha;
+          vctx.fillStyle = `rgb(${r},${g},${b})`;
+          vctx.fillRect(-size / 2, -size / 2, size, size);
+          vctx.restore();
+        }
+        vctx.globalAlpha = 1;
+        requestAnimationFrame(frame);
+      }
+      requestAnimationFrame(frame);
+    }
+
+    return { capture, animate };
+  })();
+
+  FX.voxelTransition = async (fromView, toView) => {
+    const app = $('#app');
+    const rect = app.getBoundingClientRect();
+
+    const snapA = await Voxel.capture(app);
+    if (!snapA) return false;
+
+    // freeze the old screen over the app while we prepare the new one
+    const voxCanvas = document.createElement('canvas');
+    voxCanvas.className = 'voxel-layer';
+    voxCanvas.style.left = `${rect.left}px`;
+    voxCanvas.style.top = `${rect.top}px`;
+    voxCanvas.style.width = `${rect.width}px`;
+    voxCanvas.style.height = `${rect.height}px`;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    voxCanvas.width = Math.floor(rect.width * dpr);
+    voxCanvas.height = Math.floor(rect.height * dpr);
+    const vc = voxCanvas.getContext('2d');
+    vc.setTransform(dpr, 0, 0, dpr, 0, 0);
+    vc.drawImage(snapA, 0, 0, rect.width, rect.height);
+    document.body.appendChild(voxCanvas);
+
+    // swap the views beneath the frozen image
+    fromView.classList.remove('active');
+    toView.classList.add('active');
+
+    // capture the new view
+    const snapB = await Voxel.capture(app);
+    if (!snapB) {
+      voxCanvas.remove();
+      return false;
+    }
+
+    FX.sound.transition();
+
+    await new Promise((resolve) => {
+      Voxel.animate(voxCanvas, snapA, snapB, rect, resolve);
+    });
+
+    // crossfade the voxel layer into the real DOM
+    voxCanvas.style.transition = 'opacity 280ms ease-out';
+    voxCanvas.style.opacity = '0';
+    setTimeout(() => voxCanvas.remove(), 300);
+    return true;
   };
 
   /* ==========================================================
@@ -395,8 +765,6 @@
 
   /* ==========================================================
      REVEAL — tier-scaled, restrained.
-     Low tiers: the name animation is the effect.
-     High tiers add a quiet flash and fine light streaks.
      ========================================================== */
   FX.playReveal = (rarity, el, { x, y } = {}) => {
     const p = x !== undefined ? { x, y } : FX.center(el);
@@ -425,7 +793,7 @@
       return;
     }
 
-    /* divine */
+    /* top tier */
     FX.flash(colors[1], 550, 0.16);
     FX.burst(p.x, p.y, { type: 'spark', count: 26, colors, speedMin: 100, speedMax: 320 });
     FX.burst(p.x, p.y, { type: 'star', count: 8, colors, speedMin: 60, speedMax: 160 });
