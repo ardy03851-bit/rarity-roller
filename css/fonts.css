@@ -1,0 +1,17 @@
+/* ============================================================
+   Font registry — the game ships a 30+ family Google Fonts
+   library so every rarity can own a distinct typeface.
+   Loaded via the <link> in index.html; this file maps roles.
+   ============================================================ */
+:root {
+  --font-body: 'Sora', 'Avenir Next', 'Segoe UI', sans-serif;
+  --font-display: 'Unbounded', 'Sora', sans-serif;
+
+  /* Full library available to rarities (js/rarities.js picks per rarity):
+     Alfa Slab One, Anton, Archivo Black, Audiowide, Bebas Neue, Bungee,
+     Chakra Petch, Cinzel, Cormorant Garamond, Creepster, Fraunces, Fredoka,
+     Grenze Gotisch, Josefin Sans, Major Mono Display, MedievalSharp,
+     Michroma, Monoton, Nosifer, Orbitron, Permanent Marker, Playfair Display,
+     Poiret One, Press Start 2P, Righteous, Rubik Mono One, Sora,
+     Space Grotesk, Syncopate, Syne, Unbounded, Zen Dots */
+}
