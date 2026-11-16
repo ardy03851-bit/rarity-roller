@@ -3,18 +3,17 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-  <meta name="theme-color" content="#0a0c11" />
+  <meta name="theme-color" content="#0b0b0d" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="description" content="Rarity Roller — a minimalist RNG slot game. Roll, discover rarities from Common to Divine, and build your collection." />
+  <meta name="description" content="Rarity Roller — a minimal RNG game. Roll, discover rarities from Common to Divine." />
   <title>Rarity Roller</title>
 
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%2360a5fa'/%3E%3Cstop offset='1' stop-color='%23c084fc'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect x='5' y='5' width='14' height='14' rx='3' transform='rotate(45 12 12)' fill='url(%23g)'/%3E%3C/svg%3E" />
 
-  <!-- Massive Google Fonts library: every rarity can claim its own typeface -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Anton&family=Archivo+Black&family=Audiowide&family=Bebas+Neue&family=Bungee&family=Chakra+Petch:wght@600;700&family=Cinzel:wght@600;800&family=Cormorant+Garamond:wght@700&family=Creepster&family=Fraunces:wght@700;900&family=Fredoka:wght@600;700&family=Grenze+Gotisch:wght@700;900&family=Josefin+Sans:wght@600;700&family=Major+Mono+Display&family=MedievalSharp&family=Michroma&family=Monoton&family=Nosifer&family=Orbitron:wght@700;900&family=Permanent+Marker&family=Playfair+Display:wght@700;900&family=Poiret+One&family=Press+Start+2P&family=Righteous&family=Rubik+Mono+One&family=Sora:wght@400;600;700&family=Space+Grotesk:wght@500;700&family=Syncopate:wght@700&family=Syne:wght@700;800&family=Unbounded:wght@500;700;800&family=Zen+Dots&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Anton&family=Archivo+Black&family=Audiowide&family=Bebas+Neue&family=Bungee&family=Chakra+Petch:wght@600;700&family=Cinzel:wght@600;800&family=Cormorant+Garamond:wght@700&family=Creepster&family=Fraunces:wght@700;900&family=Fredoka:wght@600;700&family=Grenze+Gotisch:wght@700;900&family=Josefin+Sans:wght@600;700&family=Major+Mono+Display&family=MedievalSharp&family=Michroma&family=Monoton&family=Nosifer&family=Orbitron:wght@700;900&family=Permanent+Marker&family=Playfair+Display:wght@700;900&family=Poiret One&family=Press Start 2P&family=Righteous&family=Rubik+Mono+One&family=Sora:wght@400;600;700&family=Space+Grotesk:wght@500;700&family=Syncopate:wght@700&family=Syne:wght@700;800&family=Unbounded:wght@500;700;800&family=Zen+Dots&display=swap" rel="stylesheet" />
 
   <link rel="stylesheet" href="css/base.css" />
   <link rel="stylesheet" href="css/fonts.css" />
@@ -22,92 +21,63 @@
   <link rel="stylesheet" href="css/ui.css" />
 </head>
 <body>
-  <!-- Full-screen particle canvas driven by the RarityFX engine -->
   <canvas id="fx-canvas" aria-hidden="true"></canvas>
-
-  <!-- Ambient drifting gradient blobs (colors follow the last rarity) -->
-  <div id="ambient" aria-hidden="true">
-    <div class="blob b1"></div>
-    <div class="blob b2"></div>
-    <div class="blob b3"></div>
-  </div>
-
-  <!-- Full-screen effect layers -->
   <div id="flash-layer" aria-hidden="true"></div>
-  <div id="rays-layer" aria-hidden="true"></div>
 
-  <header class="top-bar">
-    <button id="sound-toggle" class="icon-btn" aria-label="Toggle sound" aria-pressed="true">
-      <svg class="ic ic-on" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>
-      <svg class="ic ic-off" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="m22 9-6 6"/><path d="m16 9 6 6"/></svg>
-    </button>
-    <h1 class="game-title">RARITY<em>ROLLER</em></h1>
-    <div class="stat-chips" role="status" aria-live="polite">
-      <div class="chip"><span class="chip-label">Rolls</span><b id="stat-total">0</b></div>
-      <div class="chip"><span class="chip-label">Best find</span><b id="stat-best" class="stat-best">—</b></div>
+  <header class="bar">
+    <h1 class="wordmark">Rarity&nbsp;Roller</h1>
+    <div class="bar-right">
+      <span class="bar-stat"><b id="stat-total">0 rolls</b></span>
+      <span class="bar-stat" id="stat-best-wrap">best <b id="stat-best">—</b></span>
+      <button id="sound-toggle" class="icon-btn" aria-label="Toggle sound" aria-pressed="true">
+        <svg class="ic ic-on" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg>
+        <svg class="ic ic-off" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="m22 9-6 6"/><path d="m16 9 6 6"/></svg>
+      </button>
     </div>
   </header>
 
   <main id="app">
-    <!-- ============ ROLL VIEW ============ -->
+    <!-- ============ ROLL ============ -->
     <section id="view-roll" class="view active" aria-label="Roll">
-      <div class="slot-frame" id="slot-frame">
-        <div class="slot-window" id="slot-window">
-          <div class="reel" id="reel"></div>
-        </div>
-        <div class="slot-fade fade-top" aria-hidden="true"></div>
-        <div class="slot-fade fade-bottom" aria-hidden="true"></div>
-        <div class="slot-marker" aria-hidden="true"><i></i><i></i></div>
+      <div class="stage">
+        <div class="stage-icon" id="stage-icon" aria-hidden="true"></div>
+        <div class="stage-name" id="stage-name" aria-live="polite"></div>
+        <div class="stage-meta" id="stage-meta"></div>
       </div>
 
-      <div class="roll-column">
-        <button id="roll-btn" class="roll-btn" type="button">
-          <span class="roll-btn-beam" aria-hidden="true"></span>
-          <span class="roll-btn-label">ROLL</span>
-        </button>
-        <p class="hint" id="roll-hint">Tap roll to spin the reel</p>
-
-        <div id="result-slot" class="result-slot" aria-live="polite"></div>
-      </div>
+      <button id="roll-btn" class="roll-btn" type="button">
+        <span class="roll-label">Roll</span>
+      </button>
     </section>
 
-    <!-- ============ INVENTORY VIEW ============ -->
+    <!-- ============ INVENTORY ============ -->
     <section id="view-inventory" class="view" aria-label="Inventory">
       <div class="view-head">
         <h2>Inventory</h2>
-        <p class="view-sub">Every rarity you have ever rolled is saved on this device.</p>
+        <p class="view-sub">Your collection is saved on this device.</p>
       </div>
-      <div id="inv-grid" class="inv-grid"></div>
+      <ul id="inv-list" class="inv-list" role="list"></ul>
     </section>
 
-    <!-- ============ CHANGELOG VIEW ============ -->
+    <!-- ============ CHANGELOG ============ -->
     <section id="view-changelog" class="view" aria-label="Changelog">
       <div class="view-head">
         <h2>Changelog</h2>
-        <p class="view-sub">Every update, in order. Rarity names glow with their own animations.</p>
+        <p class="view-sub">Rarity names carry their own animations.</p>
       </div>
       <div id="changelog" class="changelog"></div>
     </section>
   </main>
 
-  <!-- ============ TABS MENU ============ -->
+  <!-- ============ TABS ============ -->
   <button id="tabs-toggle" class="tabs-toggle" aria-label="Open tab menu" aria-expanded="false" aria-controls="tabs-menu">
-    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
   </button>
 
   <nav id="tabs-menu" class="tabs-menu" aria-hidden="true" aria-label="Tab navigation">
-    <button class="tab-btn" data-tab="roll" aria-current="page">
-      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M7 12h4M7 8h10M7 16h6"/></svg>
-      <span>Roll</span>
-    </button>
-    <button class="tab-btn" data-tab="inventory">
-      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>
-      <span>Inventory</span>
-    </button>
-    <button class="tab-btn" data-tab="changelog">
-      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2h8M12 2v4M5 8h14l-1.2 12.1a2 2 0 0 1-2 1.9H8.2a2 2 0 0 1-2-1.9L5 8Z"/><path d="M9.5 13h5"/></svg>
-      <span>Changelog</span>
-    </button>
+    <button class="tab-btn" data-tab="roll" aria-current="page">Roll</button>
+    <button class="tab-btn" data-tab="inventory">Inventory</button>
+    <button class="tab-btn" data-tab="changelog">Changelog</button>
   </nav>
 
   <script src="js/engine.js"></script>

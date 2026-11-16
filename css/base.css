@@ -10,14 +10,14 @@
 }
 
 :root {
-  /* surfaces — deep space glass */
-  --color-bg: #0a0c11;
+  /* surfaces — flat, near-black, monochrome */
+  --color-bg: #0b0b0d;
   --color-surface: rgba(255, 255, 255, 0.04);
   --color-surface-2: rgba(255, 255, 255, 0.07);
   --color-border: rgba(255, 255, 255, 0.1);
-  --color-text: #e8eaf0;
-  --color-text-muted: #8b90a0;
-  --color-text-faint: #5a5f6e;
+  --color-text: #ececee;
+  --color-text-muted: #8f8f99;
+  --color-text-faint: #55555f;
 
   /* type scale */
   --text-xs: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);

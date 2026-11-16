@@ -7,6 +7,18 @@
 
 const CHANGELOG = [
   {
+    version: '1.1.0',
+    date: '2026-11-16',
+    tag: 'Redesign',
+    notes: [
+      'The whole interface was stripped back to one idea: **the name is the game**. The reel window, chips, result cards, stat panels, ambient blobs and arcade effects are gone — the screen is now a huge rarity name, a thin roll button, and quiet type everywhere else.',
+      'The roll is a **decelerating ticker**: rarity names flick through in their own typefaces and gradients, slowing down until the result lands as the headline. No blur, no whoosh, no bounce.',
+      'Reveal effects were rewritten to be restrained. Common and Uncommon get the name animation alone; Rare through Mythic add a quiet flash and fine light streaks; only **Divine** earns a full choreography. Screen shake, confetti, glyphs and fanfares are gone.',
+      'Sound is now warm and quiet: soft ticker blips and slow pad chords on reveal. No click effects on buttons and menus.',
+      'Inventory became a clean typographic list with counts and odds. Changelog entries flattened into editorial rules — the animated rarity names you know from **Legendary** and **Celestial** stay exactly as they were.',
+    ],
+  },
+  {
     version: '1.0.0',
     date: '2026-11-16',
     tag: 'Initial release',
@@ -61,7 +73,8 @@ const CHANGELOG = [
   function renderChangelog(el) {
     const wrap = document.createDocumentFragment();
 
-    [...CHANGELOG].reverse().forEach((entry) => {
+    // CHANGELOG is stored newest-first; render as-is
+    CHANGELOG.forEach((entry) => {
       const article = document.createElement('article');
       article.className = 'cl-entry';
       article.innerHTML = `
